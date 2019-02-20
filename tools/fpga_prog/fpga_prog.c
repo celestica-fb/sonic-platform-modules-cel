@@ -1,24 +1,24 @@
 /********************************************************************
 Author: Sittisak Sinprem <ssinprem@celestica.com>
-	flash_spi_fpga
+    flash_spi_fpga
 
-	user-space appliction to flash SPI FLASH
+    user-space appliction to flash SPI FLASH
 
-	As a "root" previledge, this program can run well
-	while other user group would report system errors under Linux OS.
+    As a "root" previledge, this program can run well
+    while other user group would report system errors under Linux OS.
 
 *********************************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
-#include <fcntl.h>		//for open()
-#include <unistd.h>		//for close()
+#include <fcntl.h>      //for open()
+#include <unistd.h>     //for close()
 #include <string.h>
 #include <stdint.h>
 
 /**
- * The FPGA SPI Flash update application for Seastone2
+ * The FPGA SPI Flash update application
  * This application read the binary image file and program
  * into flash memory. The erasing time can be long the
  * the WAIT_WRITE_READY_SEC should be more than 30 seconds.
@@ -58,70 +58,70 @@ Author: Sittisak Sinprem <ssinprem@celestica.com>
 #define DEV_CHAR_FILENAME "/dev/fwupgrade"
 
 struct fpga_reg_data {
-	uint32_t reg;
-	uint32_t value;
+    uint32_t reg;
+    uint32_t value;
 };
 
 enum{
-	READREG,
-	WRITEREG
+    READREG,
+    WRITEREG
 };
 
 unsigned int func_write(int addr,unsigned long value){
-	int fd;
-	int ret;
-	struct fpga_reg_data fpga_reg;
+    int fd;
+    int ret;
+    struct fpga_reg_data fpga_reg;
 
-	fd = open(DEV_CHAR_FILENAME, O_RDWR);
+    fd = open(DEV_CHAR_FILENAME, O_RDWR);
 
-	fpga_reg.reg = addr;
-	fpga_reg.value = value;
+    fpga_reg.reg = addr;
+    fpga_reg.value = value;
 
-	ioctl(fd, WRITEREG, (void *)&fpga_reg);
+    ioctl(fd, WRITEREG, (void *)&fpga_reg);
 
-	close(fd);
-	return 0;
+    close(fd);
+    return 0;
 }
 
 unsigned int func_read(int addr){
-	int fd;
-	int ret;
+    int fd;
+    int ret;
 
-	struct fpga_reg_data fpga_reg;
+    struct fpga_reg_data fpga_reg;
 
-	fd = open(DEV_CHAR_FILENAME, O_RDWR);
+    fd = open(DEV_CHAR_FILENAME, O_RDWR);
 
-	fpga_reg.reg = addr;
+    fpga_reg.reg = addr;
 
-	ioctl(fd, READREG, (void *)&fpga_reg);
+    ioctl(fd, READREG, (void *)&fpga_reg);
 
-	close(fd);
-	return fpga_reg.value;
+    close(fd);
+    return fpga_reg.value;
 }
 
 void dump_status(int Stat){
-	debug("#########################");
-	debug("%d ready(1)/busy(0)",        (Stat&SPI_STAT_MARK_READY)!=0);
-	debug("%d done",                    (Stat&SPI_STAT_MARK_DONE)!=0);
-	debug("%d error any",               (Stat&SPI_STAT_MARK_ERROR_ANY)!=0);
-	debug("%d error checkId",           (Stat&SPI_STAT_MARK_ERROR_CHKID)!=0);
-	debug("%d error erase",             (Stat&SPI_STAT_MARK_ERROR_ERASE)!=0);
-	debug("%d error program",           (Stat&SPI_STAT_MARK_ERROR_PROG)!=0);
-	debug("%d error timeout",           (Stat&SPI_STAT_MARK_ERROR_TOUT)!=0);
-	debug("%d error crc",               (Stat&SPI_STAT_MARK_ERROR_CRC)!=0);
-	debug("%d stage started",           (Stat&SPI_STAT_MARK_STG_STARTED)!=0);
-	debug("%d stage inited",            (Stat&SPI_STAT_MARK_STG_INITED)!=0);
-	debug("%d stage checked id",        (Stat&SPI_STAT_MARK_STG_CHECKED_ID)!=0);
-	debug("%d stage erasred",           (Stat&SPI_STAT_MARK_STG_ERSD_SW)!=0);
-	debug("%d stage upload erase img",  (Stat&SPI_STAT_MARK_STG_UP_ERSD_IMG)!=0);
-	debug("%d stage upload program img",(Stat&SPI_STAT_MARK_STG_UP_PRG_IMG)!=0);
-	debug("%d stage verified",          (Stat&SPI_STAT_MARK_STG_VERIFIED)!=0);
-	debug("%d stage completed",         (Stat&SPI_STAT_MARK_STG_PRG_CMPT)!=0);
+    debug("#########################");
+    debug("%d ready(1)/busy(0)",        (Stat&SPI_STAT_MARK_READY)!=0);
+    debug("%d done",                    (Stat&SPI_STAT_MARK_DONE)!=0);
+    debug("%d error any",               (Stat&SPI_STAT_MARK_ERROR_ANY)!=0);
+    debug("%d error checkId",           (Stat&SPI_STAT_MARK_ERROR_CHKID)!=0);
+    debug("%d error erase",             (Stat&SPI_STAT_MARK_ERROR_ERASE)!=0);
+    debug("%d error program",           (Stat&SPI_STAT_MARK_ERROR_PROG)!=0);
+    debug("%d error timeout",           (Stat&SPI_STAT_MARK_ERROR_TOUT)!=0);
+    debug("%d error crc",               (Stat&SPI_STAT_MARK_ERROR_CRC)!=0);
+    debug("%d stage started",           (Stat&SPI_STAT_MARK_STG_STARTED)!=0);
+    debug("%d stage inited",            (Stat&SPI_STAT_MARK_STG_INITED)!=0);
+    debug("%d stage checked id",        (Stat&SPI_STAT_MARK_STG_CHECKED_ID)!=0);
+    debug("%d stage erasred",           (Stat&SPI_STAT_MARK_STG_ERSD_SW)!=0);
+    debug("%d stage upload erase img",  (Stat&SPI_STAT_MARK_STG_UP_ERSD_IMG)!=0);
+    debug("%d stage upload program img",(Stat&SPI_STAT_MARK_STG_UP_PRG_IMG)!=0);
+    debug("%d stage verified",          (Stat&SPI_STAT_MARK_STG_VERIFIED)!=0);
+    debug("%d stage completed",         (Stat&SPI_STAT_MARK_STG_PRG_CMPT)!=0);
 }
 
 int flash_program(char *data,int lens){
-	int ctimeout;
-	int error =0;
+    int ctimeout;
+    int error =0;
     unsigned long Stat = 0;
 
     reg_read(REG_SPI_RESET,Stat);
@@ -133,22 +133,22 @@ int flash_program(char *data,int lens){
     ctimeout=0;
     do{        // wait for done flag
         reg_read(REG_SPI_STAT,Stat);
-			if(Stat & SPI_STAT_MARK_ERROR_ANY){
-				dump_status(Stat);
-				error = Stat;
-				break;
-			}
-			if(ctimeout++ > WAIT_WRITE_READY_SEC){
-				error = Stat| SPI_STAT_MARK_ERROR_TOUT;
-				debug("wait ready timeout . . .");
-				break;
-			}
-	printf(" waiting status to ready ... %d s.  status = %x\n",ctimeout,Stat);
-	sleep(1);
+            if(Stat & SPI_STAT_MARK_ERROR_ANY){
+                dump_status(Stat);
+                error = Stat;
+                break;
+            }
+            if(ctimeout++ > WAIT_WRITE_READY_SEC){
+                error = Stat| SPI_STAT_MARK_ERROR_TOUT;
+                debug("wait ready timeout . . .");
+                break;
+            }
+    printf(" waiting status to ready ... %d s.  status = %x\n",ctimeout,Stat);
+    sleep(1);
     }while((Stat & 0x80F8) != 0x80F8);
-	if(error){
-	  return -1;
-	}
+    if(error){
+      return -1;
+    }
     printf("Ready\n");
 
 
@@ -168,41 +168,41 @@ int flash_program(char *data,int lens){
 
         reg_write(REG_SPI_WR_DAT,dbuf); // write data
 
-		reg_write(REG_SPI_WR_EN,0x1);   // write enable
+        reg_write(REG_SPI_WR_EN,0x1);   // write enable
 
-		reg_write(REG_SPI_WR_EN,0x0);
+        reg_write(REG_SPI_WR_EN,0x0);
 
-		ctimeout=0;
+        ctimeout=0;
         do{        // wait for done flag
             reg_read(REG_SPI_STAT,Stat);
-			//debug(" Stat %8.8x %d",Stat,ctimeout);
-			if(Stat & SPI_STAT_MARK_ERROR_ANY){
-				dump_status(Stat);
-				error = Stat;
-				break;
-			}
+            //debug(" Stat %8.8x %d",Stat,ctimeout);
+            if(Stat & SPI_STAT_MARK_ERROR_ANY){
+                dump_status(Stat);
+                error = Stat;
+                break;
+            }
 
-			if(ctimeout++ > WAIT_WRITE_CONTINUE_CYCLE){
-				error = Stat| SPI_STAT_MARK_ERROR_TOUT;
-				debug("wait ready timeout . . .");
-				break;
-			}
+            if(ctimeout++ > WAIT_WRITE_CONTINUE_CYCLE){
+                error = Stat| SPI_STAT_MARK_ERROR_TOUT;
+                debug("wait ready timeout . . .");
+                break;
+            }
         }while((Stat & 0x80F8) != 0x80F8);
 
         if(error){
-			printf("FPGA programing fail at %d/%d\n",i,lens);
-			debug("Status = %4.4X",error);
-			break;
-		}
+            printf("FPGA programing fail at %d/%d\n",i,lens);
+            debug("Status = %4.4X",error);
+            break;
+        }
 
         i +=4;
 
-		if(i%(lens/40*4)==0){
-			printf("FPGA programing . . . %d/%d\n",i,lens);
-		}
+        if(i%(lens/40*4)==0){
+            printf("FPGA programing . . . %d/%d\n",i,lens);
+        }
     }
 
-	dump_status(Stat);
+    dump_status(Stat);
     printf("Status = %4.4X\n",Stat);
 
     reg_write(REG_SPI_WR_EN,0x0);    // write protect
@@ -212,82 +212,71 @@ int flash_program(char *data,int lens){
 }
 
 int main(int argc,char **argv){
-	FILE *pFILE;
-	int filesize;
-	char command[16];
-	char filename[32];
-	char *fpga_buff;
-	int status;
+    FILE *pFILE;
+    int filesize;
+    char *filename;
+    char *fpga_buff;
+    int status;
+    int max_size = 128;
+    int current_size = max_size;
+    int i = 0;
+    int c = EOF;
 
-	printf(" FPGA PROGRAMMNG version 0.1.0 \n");
-	printf(" build date : %s %s\n",__DATE__,__TIME__);
+    printf(" FPGA PROGRAMMNG version 0.1.1 \n");
+    printf(" build date : %s %s\n",__DATE__,__TIME__);
 
-	if(argc<2){
-		printf("please enter filename : ");
-		scanf("%s",filename);
-	}else{
-		strcpy(filename,argv[1]);
-	}
-
-	// while(1){
-	// 	printf("Do you use \"%s\" to program FPGA Flash ? (y/n/q) : ",filename);
-	// 	scanf("%s",command);
-	// 	if(strcmp(command,"y") == 0){
-	// 		break;
-	// 	}
-	// 	if(strcmp(command,"n") == 0){
-	// 		printf("please enter filename : ");
-	// 		scanf("%s",filename);
-	// 	}
-	// 	if(strcmp(command,"q") == 0){
-	// 		return -1;
-	// 	}
-	// }
-
-	pFILE = fopen(filename,"rb");
-	if (pFILE == NULL)
-	{
-        printf("Could not open the file %s, exit\n",filename);
-        return -1;
+    filename = NULL;
+    filename = malloc(max_size);
+    if(!filename){
+        exit(-12); /* Out of memory */
     }
 
-	fseek(pFILE , 0 , SEEK_END);
-	filesize = ftell (pFILE);
-	rewind(pFILE);
-	fpga_buff = malloc(filesize);
-	if(fpga_buff==NULL){
-		printf("Can't Allocate memory \n");
-		return -1;
-	}
+    if(argc<2){
+        printf("please enter filename : ");
+        while((c = getchar()) != '\n' && c != EOF ){
 
-	fread(fpga_buff,1,filesize,pFILE);
-	fclose(pFILE);
+            filename[i++] = (char)c;
+            if(i == current_size){
+                current_size += max_size;
+                filename = realloc(filename, current_size);
+            }
+        }
+        filename[i] = '\0';
+    }else{
+        i = strlen(argv[1]) + 1;
+        filename = realloc(filename, i);
+        strcpy(filename, argv[1]);
+    }
 
-	printf(" Start FPGA Flash ... \n");
+    pFILE = fopen(filename,"rb");
+    free(filename);
+    if (pFILE == NULL)
+    {
+        printf("Could not open the file %s, exit\n",filename);
+        return -5;
+    }
 
-	status = flash_program(fpga_buff,filesize);
+    fseek(pFILE , 0 , SEEK_END);
+    filesize = ftell (pFILE);
+    rewind(pFILE);
+    fpga_buff = malloc(filesize);
+    if(fpga_buff==NULL){
+        printf("Can't Allocate memory \n");
+        return -5;
+    }
 
-	if(status == 0){
-		printf(" Programing finish \n");
-		// while(1){
-		// 	printf("this is debug loop\n");
-		// 	printf(" key s : read status\n");
-		// 	printf(" key q : exit\n");
-		// 	printf(" enter : ");
-		// 	scanf("%s",command);
-		// 	if(strcmp(command,"s")==0){
-		// 		int Stat;
-		// 		reg_read(REG_SPI_STAT,Stat);
-		// 		printf(" Status : 0x%4.4X \n",Stat);
-		// 	}
-		// 	if(strcmp(command,"q")==0){
-		// 		printf(" Exit \n");
-		// 		return 0;
-		// 	}
-		// }
-	}else{
-		printf(" Program Error : error code %4.4x \n",status);
-	}
+    fread(fpga_buff,1,filesize,pFILE);
+    fclose(pFILE);
 
-	return status;
+    printf(" Start FPGA Flash ... \n");
+
+    status = flash_program(fpga_buff,filesize);
+
+    if(status == 0){
+        printf(" Programing finish \n");
+    }else{
+        printf(" Program Error : error code %4.4x \n",status);
+    }
+
+    return status;
 }

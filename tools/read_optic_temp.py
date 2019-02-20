@@ -138,6 +138,7 @@ def cli(port_num):
     port_config_file_path = get_path_to_port_config_file()
     platform_sfputil.read_porttab_mappings(port_config_file_path)
     port_list = platform_sfputil.port_to_i2cbus_mapping
+    port_eeprom_list = latform_sfputil.port_to_eeprom_mapping
     qsfp_port_list = platform_sfputil.qsfp_ports
 
     port_dict = {}
@@ -158,7 +159,7 @@ def cli(port_num):
 
     for port_num, bus_num in port_list.items():
         port_type = "QSFP" if port_num in qsfp_port_list else "SFP"
-        port_bus_list.append(bus_num)
+        port_bus_list.append(port_eeprom_list[port_num])
         port_type_list.append(port_type)
         if len(port_bus_list) >= i2c_block_size:
             port_tub = (port_bus_list, port_type_list)

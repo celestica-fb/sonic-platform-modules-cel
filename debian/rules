@@ -5,7 +5,7 @@ export INSTALL_MOD_DIR:=extra
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= dx010 questone2 silverstone phalanx fishbone48 fishbone32
+MODULE_DIRS:= dx010 haliburton phalanx fishbone48 fishbone32
 
 %:
 	dh $@
@@ -15,7 +15,7 @@ override_dh_auto_build:
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
 	done)
 	make -C $(MOD_SRC_DIR)/tools/ispvme_12.2;
-	gcc -std=c99 $(MOD_SRC_DIR)/tools/fpga_prog/fpga_prog.c -o $(MOD_SRC_DIR)/tools/fpga_prog/fpga_prog;
+	gcc $(MOD_SRC_DIR)/tools/fpga_prog/fpga_prog.c -o $(MOD_SRC_DIR)/tools/fpga_prog/fpga_prog;
 
 override_dh_auto_install:
 	(for mod in $(MODULE_DIRS); do \

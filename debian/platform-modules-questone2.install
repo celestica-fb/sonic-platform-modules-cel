@@ -1,4 +1,0 @@
-questone2/cfg/questone2-modules.conf etc/modules-load.d
-questone2/scripts/fan_controller.py usr/local/bin
-questone2/scripts/fancontrol usr/local/bin
-questone2/scripts/sensors usr/bin

@@ -1,2 +1,0 @@
-update-rc.d platform-modules-questone2 defaults
-service platform-modules-questone2 start

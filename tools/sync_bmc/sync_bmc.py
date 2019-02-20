@@ -107,9 +107,9 @@ def load_platform_util(module_name, class_name):
 
 def get_optic_temp(port_list):
     temp_list = []
-    for idx, port_num in enumerate(port_list[0]):
+    for idx, port_eeprom in enumerate(port_list[0]):
         temp = platform_optictemputil.get_optic_temp(
-            port_num, port_list[1][idx]) if port_list[2][idx] else 0
+            port_eeprom, port_list[1][idx]) if port_list[2][idx] else 0
         temp_list.append(round(float(temp), 2))
     return max(temp_list)
 
@@ -118,6 +118,7 @@ def get_max_optic_temp():
     port_config_file_path = get_path_to_port_config_file()
     platform_sfputil.read_porttab_mappings(port_config_file_path)
     port_list = platform_sfputil.port_to_i2cbus_mapping
+    port_eeprom_list = platform_sfputil.port_to_eeprom_mapping
     qsfp_port_list = platform_sfputil.qsfp_ports
 
     port_data_list = []
@@ -131,7 +132,7 @@ def get_max_optic_temp():
 
     for port_num, bus_num in port_list.items():
         port_type = "QSFP" if port_num in qsfp_port_list else "SFP"
-        port_bus_list.append(bus_num)
+        port_bus_list.append(port_eeprom_list[port_num])
         port_type_list.append(port_type)
         status = platform_sfputil.get_presence(port_num)
         port_presence_list.append(status)

@@ -1,7 +1,0 @@
-#!/bin/bash
-
-if [ -r /usr/local/bin/fan_controller.py ]; then
-        python /usr/local/bin/fan_controller.py "$@"
-else
-        echo "Error : script does not installed"
-fi
