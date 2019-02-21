@@ -47,7 +47,11 @@
 #     //             "Present": True,
 #     //             "PowerStatus": True,
 #     //             "PN": "PN-EXAMPLE-123",
-#     //             "SN": "SN-EXAMPLE-123"
+#     //             "SN": "SN-EXAMPLE-123",
+#     //             "InputStatus": True,
+#     //             "OutputStatus": True,
+#     //             "InputType": "DC"
+#     //             "AirFlow": "BTOF"
 #     //         },
 #     //         "PSU2": {
 #     //             "Present": False
@@ -444,35 +448,54 @@ def status(ctx):
 
         psu_names = [ k for k in psu_dict.keys() if cmp('Number', k) != 0 ]
         psu_names.sort()
-        header = ['PSU', 'Presence', 'Status', 'PN', 'SN']
+        header = ['PSU', 'Presence', 'InputStatus', 'InputType', 'OutputStatus', 'PN', 'SN', 'AirFlow']
         status_table = []
         for psu_name in psu_names:
             psu = psu_dict[psu_name]
             presence = psu.get('Present')
-            pwr_status = psu.get('PowerStatus')
             pn = psu.get('PN')
             sn = psu.get('SN')
+            in_status = psu.get('InputStatus')
+            out_status = psu.get('OutputStatus')
+            in_type = psu.get('InputType')
+            airflow = psu.get('AirFlow')
+
             if presence == None:
-                print 'Error: PSU get all format invaid, prop "Present" missing.'
+                print 'Error: PSU get all format invaid, prop "Present" is missing.'
                 continue
             elif presence == False:
                 presence = 'NOT_PRESENT'
-                pwr_status = 'N/A'
+                in_status = 'N/A'
+                out_status = 'N/A'
+                in_type = 'N/A'
                 pn = 'N/A'
-                sn = 'N/A'
+                pn = 'N/A'
             else:
                 presence = 'PRESENT'
-                if pwr_status == None:
-                    pwr_status = 'N/A'
-                elif pwr_status == True:
-                    pwr_status = 'OK'
+                if in_status == None:
+                    in_status = 'N/A'
+                elif in_status == True:
+                    in_status = 'OK'
                 else:
-                    pwr_status = 'NOT_OK'
+                    in_status = 'NOT_OK'
+
+                if in_type == None:
+                    in_type = 'N/A'
+
+                if out_status == None:
+                    out_status = 'N/A'
+                elif out_status == True:
+                    out_status = 'OK'
+                else:
+                    out_status = 'NOT_OK'
+
                 if pn == None:
                     pn = 'N/A'
                 if sn == None:
                     sn = 'N/A'
-            status_table.append([psu_name, presence, pwr_status, pn, sn])
+                if airflow == None:
+                    airflow = 'N/A'
+            status_table.append([psu_name, presence, in_status, in_type, out_status, pn, sn, airflow])
 
         if len(status_table) != psu_nr:
             print 'Error: PSU get all missing some PSU information.'
@@ -491,40 +514,43 @@ def status(ctx):
             print 'Error: FAN get all format invalid, prop "Number" missing.'
             return
 
-        header = [ 'FAN', 'Presence', 'Running', 'Speed', 'LowThd', 'HighThd', 'PN', 'SN' ]
+        header = [ 'FAN', 'Presence', 'Status', 'Speed', 'LowThd', 'HighThd', 'PN', 'SN', 'AirFlow' ]
         status_table = []
         fan_names = [ k for k in fan_dict.keys() if cmp('Number', k) != 0 ]
         fan_names.sort()
         for fan_name in fan_names:
             fan = fan_dict[fan_name]
             presence = fan.get('Present')
-            running = fan.get('Running')
             speed = fan.get('Speed')
             low = fan.get('LowThd')
             high = fan.get('HighThd')
             pn = fan.get('PN')
             sn = fan.get('SN')
+            status = fan.get('Status')
+            airflow = fan.get('AirFlow')
 
             if presence == None:
                 print 'Error: FAN get all format invaid, prop "Present" missing.'
                 continue
             elif presence == False:
                 presence = 'NOT_PRESENT'
-                running = 'N/A'
+                status = 'N/A'
                 speed = 'N/A'
                 low = 'N/A'
                 high = 'N/A'
                 pn = 'N/A'
                 sn = 'N/A'
+                airflow = 'N/A'
             else:
                 presence = 'PRESENT'
-                if running == None:
-                    print 'Error: FAN get all format invalid, prop "Running" missing.'
-                    running = 'N/A'
-                elif running == True:
-                    running = 'YES'
+                if status == None:
+                    status = 'N/A'
+                elif status == True:
+                    status = 'OK'
                 else:
-                    running = 'NO'
+                    status = 'NOT_OK'
+                if airflow == None:
+                    airflow = 'N/A'
                 if speed == None:
                     speed = 'N/A'
                 if low == None:
@@ -536,7 +562,7 @@ def status(ctx):
                 if sn == None:
                     sn = 'N/A'
 
-            status_table.append([fan_name, presence, running, speed, low, high, pn, sn])
+            status_table.append([fan_name, presence, status, speed, low, high, pn, sn, airflow])
 
         if len(status_table) != fan_nr:
             print 'Error: FAN get all missing some FAN information.'
@@ -561,9 +587,13 @@ def status(ctx):
             si_names = [ k for k in sensor_obj.keys() ]
             si_names.sort()
             for si_name in si_names:
-                if si_name == "Sys_AirFlow":
-                    continue
                 si = sensor_obj[si_name]
+                if si_name == "Sys_AirFlow":
+                    status = 'OK'
+                    airflow = si
+                    status_table.append([sensor_name, si_name, status, airflow, airflow, airflow])
+                    continue
+
                 stype = si.get('Type')
                 sval = si.get('Value')
                 slow = si.get('LowThd')
@@ -595,7 +625,7 @@ def status(ctx):
                 status = 'NOT_OK'
                 if fault == False and sval > slow and sval < shigh:
                     status = 'OK'
-
+                
                 status_table.append([sensor_name, si_name, status, (str(sval)+sunit), (str(slow)+sunit), (str(shigh)+sunit)])
 
         if len(status_table) > 0:
