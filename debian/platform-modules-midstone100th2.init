@@ -17,13 +17,21 @@ start)
 
         depmod -a
 	modprobe i2c-core
+	sleep 1
 	modprobe i2c-dev
+	sleep 1
 	modprobe i2c-mux
+	sleep 1
 	modprobe i2c-smbus
+	sleep 1
 	modprobe i2c-isch
+	sleep 1
 	modprobe i2c-ismt
+	sleep 1
 	modprobe i2c-i801
+	sleep 1
 	modprobe sff_8436_eeprom
+	sleep 1
 	modprobe midstone_driver
 	sleep 2
 	echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
