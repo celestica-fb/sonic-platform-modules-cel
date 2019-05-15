@@ -1,0 +1,9 @@
+[Unit]
+Description=Service for enable BMC watchdog.
+After=multi-user.target
+
+[Service]
+ExecStart=/bin/sh /usr/local/etc/bmc_wdt.sh start
+
+[Install]
+WantedBy=multi-user.target

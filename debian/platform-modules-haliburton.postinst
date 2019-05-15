@@ -1,3 +1,7 @@
 depmod -a
 systemctl enable platform-modules-haliburton.service
 systemctl start platform-modules-haliburton.service
+
+# Enable heartbeat timer
+systemctl enable bmc_wdt.timer
+systemctl start bmc_wdt.timer

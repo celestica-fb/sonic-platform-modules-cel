@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for service to send hearth beat to BMC watchdog.
+
+[Timer]
+OnUnitActiveSec=20s
+OnBootSec=20s
+AccuracySec=1us
+
+[Install]
+WantedBy=timers.target
