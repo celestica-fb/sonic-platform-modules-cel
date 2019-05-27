@@ -9,3 +9,7 @@ systemctl start platform-modules-phalanx.service
 # Enable platform-sync_bmc-timer
 # systemctl enable sync_bmc.timer
 # systemctl start sync_bmc.timer
+
+# Enable heartbeat timer
+systemctl enable bmc_wdt.timer
+systemctl start bmc_wdt.timer
