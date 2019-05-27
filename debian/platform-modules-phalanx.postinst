@@ -11,5 +11,5 @@ systemctl start platform-modules-phalanx.service
 # systemctl start sync_bmc.timer
 
 # Enable heartbeat timer
-systemctl enable bmc_wdt.timer
-systemctl start bmc_wdt.timer
+systemctl enable bmc_wdt.service
+systemctl start bmc_wdt.service

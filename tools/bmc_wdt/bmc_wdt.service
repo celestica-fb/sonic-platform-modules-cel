@@ -3,7 +3,7 @@ Description=Service for enable BMC watchdog.
 After=multi-user.target
 
 [Service]
-ExecStart=/bin/sh /usr/local/etc/bmc_wdt.sh start
+ExecStart=/bin/bash -c "while true; do /bin/sh /usr/local/etc/bmc_wdt.sh start; sleep 20; done"
 
 [Install]
 WantedBy=multi-user.target
