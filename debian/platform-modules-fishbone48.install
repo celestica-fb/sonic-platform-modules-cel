@@ -11,3 +11,4 @@ tools/bmcutil/bmcpwd /usr/local/etc/
 tools/bmcutil/bmcutil.py /usr/local/etc/
 tools/bmc_wdt/bmc_wdt.service etc/systemd/system
 tools/bmc_wdt/bmc_wdt.sh /usr/local/etc/
+tools/logrotate/rsyslog /usr/local/etc/
