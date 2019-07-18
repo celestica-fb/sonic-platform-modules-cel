@@ -108,3 +108,10 @@
         fi
     endscript
 }
+/var/log/bmc_feed_watchdog.log {
+    size 100k
+    rotate 4
+    compress
+    missingok
+    notifempty
+}
