@@ -17,7 +17,7 @@ HEARTBEAT_TIME = 20
 WDT_TIMEOUT = 60
 HOSTNAME = "240.1.1.1"
 WDT_URL = "http://240.1.1.1:8080/api/sys/watchdog"
-BMC_WDT_LOG = '/var/log/bmcwdt.log'
+BMC_WDT_LOG = '/var/log/bmc_feed_watchdog.log'
 logging.basicConfig(filename=BMC_WDT_LOG,
                     filemode='a',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
@@ -34,8 +34,8 @@ def set_wdt_timeout(timeout):
         res = requests.post(WDT_URL, json=data, timeout=5)
         status_code = res.status_code
         message = res.json().get('result')
-    except requests.ConnectionError:
-        message = "Unable to connect to watchdog API"
+    except:
+        message = "Unable set watchdog timeout"
 
     return status_code, message
 
