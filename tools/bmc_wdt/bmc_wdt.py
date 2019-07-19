@@ -9,20 +9,28 @@
 import os
 import time
 import logging
+import logging.handlers
 import requests
 import argparse
 import subprocess
 
 HEARTBEAT_TIME = 20
+MAX_FILE_COUNT = 3
 WDT_TIMEOUT = 60
+MAX_LOG_BYTES = 20 * 1000000
 HOSTNAME = "240.1.1.1"
 WDT_URL = "http://240.1.1.1:8080/api/sys/watchdog"
 BMC_WDT_LOG = '/var/log/bmc_feed_watchdog.log'
-logging.basicConfig(filename=BMC_WDT_LOG,
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%b %d %H:%M:%S',
-                    level=logging.INFO)
+
+
+lh = logging.handlers.RotatingFileHandler(
+    filename=BMC_WDT_LOG, maxBytes=MAX_LOG_BYTES, backupCount=MAX_FILE_COUNT)
+formatter = logging.Formatter(
+    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%b %d %H:%M:%S')
+lh.setFormatter(formatter)
+logger = logging.getLogger('bmc_feed_watchdog')
+logger.addHandler(lh)
+logger.setLevel(logging.INFO)
 
 
 def set_wdt_timeout(timeout):
@@ -53,7 +61,7 @@ def ping():
 
 
 def start():
-    logging.info("Started CPU watchdog")
+    logger.info("Started CPU watchdog")
     error_flag = 1
     status_code = -1
     while True:
@@ -61,14 +69,14 @@ def start():
 
         # Error checking
         if status_code == 200 and message != 'success':
-            logging.error(message)
+            logger.error(message)
             error_flag = 1
         elif status_code != 200 and not ping():
-            logging.error("Unable to connect to BMC")
+            logger.error("Unable to connect to BMC")
             error_flag = 1
         elif status_code != 200 and ping():
             if not error_flag:
-                logging.error(message)
+                logger.error(message)
             time.sleep(1)
             error_flag = 1
             continue
@@ -76,25 +84,25 @@ def start():
         # Pass error
         if error_flag and status_code == 200 and message == 'success':
             error_flag = 0
-            logging.info("BMC connection successful")
+            logger.info("BMC connection successful")
 
         time.sleep(HEARTBEAT_TIME)
 
 
 def stop():
-    logging.info("Stopping CPU watchdog")
+    logger.info("Stopping CPU watchdog")
     status_code = -1
     while status_code != 200:
         status_code, message = set_wdt_timeout(0)
         if status_code == 200 and message != 'success':
-            logging.error(message)
+            logger.error(message)
         elif status_code != 200 and not ping():
-            logging.error("Unable to connect to BMC")
+            logger.error("Unable to connect to BMC")
         elif ping():
             time.sleep(1)
             continue
 
-    logging.info("Stopped CPU watchdog")
+    logger.info("Stopped CPU watchdog")
 
 
 def main():
