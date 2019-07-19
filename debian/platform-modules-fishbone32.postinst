@@ -1,8 +1,5 @@
 depmod -a
 
-# Copy rsyslog configuration files and templates
-cp /usr/local/etc/rsyslog /etc/logrotate.d/rsyslog
-
 # Enable bmc vlan_ip service
 systemctl enable bmc_vlan.service
 
