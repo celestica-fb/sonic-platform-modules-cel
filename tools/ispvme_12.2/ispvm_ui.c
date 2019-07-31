@@ -55,7 +55,7 @@
 
 FILE * g_pVMEFile = NULL;
 
-#define VME_DEBUG
+// #define VME_DEBUG
 
 #define DEBUG
 #ifdef DEBUG
@@ -126,7 +126,7 @@ extern unsigned int g_uiChecksumIndex;
 ***************************************************************/
 extern void calibration(void);
 extern void writePort( unsigned long a_ucPins, unsigned char a_ucValue );
-extern unsigned short g_usCpu_Frequency;
+extern unsigned int g_usCpu_Frequency;
 extern unsigned long g_ucInPort;
 extern unsigned long g_ucOutPort;
 
@@ -724,6 +724,7 @@ int main( int argc, char * argv[] )
     short siRetCode                   = 0;
     short sicalibrate                 = 1;
     short setCpuFrequency             = 0;
+    char siFailReason[24];
 
     char *cpld_img = "cpld.vme";
     int JTAG_chain = 0;
@@ -737,7 +738,7 @@ int main( int argc, char * argv[] )
     vme_out_string( VME_VERSION_NUMBER );
     vme_out_string(" Copyright 1998-2011.\n");
     vme_out_string( "\nFor daisy chain programming of all in-system programmable devices\n" );
-    vme_out_string( "\nCLS internal version 1.1.0 for Phalanx, Fishbone48, and Fishbone32.\n\n" );
+    vme_out_string( "\nCLS internal version 1.1.1 for Phalanx, Fishbone48, and Fishbone32.\n\n" );
 
     while( ( option = getopt(argc, argv, "f:c:h")) != -1 ){
         switch (option){
@@ -880,7 +881,8 @@ int main( int argc, char * argv[] )
     // isp_dnv_gpio_deinit();
 
     if ( siRetCode < 0 ) {
-        vme_out_string( "Failed due to ");
+        error_handler(siRetCode, siFailReason);
+        printf( "Failed due to %s\n", siFailReason);
         printf( " return code %d\n\n", siRetCode);
         vme_out_string( "+=======+\n" );
         vme_out_string( "| FAIL! |\n" );

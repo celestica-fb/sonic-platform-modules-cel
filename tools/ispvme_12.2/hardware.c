@@ -39,7 +39,7 @@ static void *portC2, *portC5;
  */
 
 // unsigned long  g_siIspPins        = 0x00000000;          /*Keeper of JTAG pin state*/
-unsigned short g_usCpu_Frequency  = CPU_FREQ_MH_CONFIG; /*Enter your CPU frequency here, unit in MHz.*/
+unsigned int g_usCpu_Frequency  = CPU_FREQ_MH_CONFIG; /*Enter your CPU frequency here, unit in MHz.*/
 
 /*********************************************************************************
 * This is the definition of the bit locations of each respective

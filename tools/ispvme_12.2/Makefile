@@ -12,12 +12,17 @@ TARGET   = ispvm
 
 OBJECTS += hardware.o ispvm_ui.o ivm_core.o
 
+all: $(TARGET)
 
+debug: CFLAGS += -DVME_DEBUG
+debug: $(TARGET)
+	
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCPATH) -o $@ $<
+
 $(TARGET):$(OBJECTS)
 	$(CC) $(LFLAGS) -o $(TARGET) $(OBJECTS)
-	
+
 clean:
 	-$(DEL_FILE) $(TARGET)
 	-$(DEL_FILE) $(OBJ_FILE_NODE)

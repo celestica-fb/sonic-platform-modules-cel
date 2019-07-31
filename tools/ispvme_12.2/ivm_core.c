@@ -3074,7 +3074,7 @@ signed char ispVMProcessLVDS( unsigned short a_usLVDSCount )
     }
 
 #ifdef VME_DEBUG
-    printf( ");\n", a_usLVDSCount );
+    printf( ");\n");
 #endif //VME_DEBUG
 
     return( 0 );
