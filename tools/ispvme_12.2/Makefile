@@ -17,6 +17,7 @@ all: $(TARGET)
 
 debug: CFLAGS += -DVME_DEBUG
 debug: TARGET = $(TARGET-DB)
+debug: $(TARGET)
 	
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCPATH) -o $@ $<
