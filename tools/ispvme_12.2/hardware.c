@@ -40,7 +40,7 @@ static void *portC2, *portC5;
 
 // unsigned long  g_siIspPins        = 0x00000000;          /*Keeper of JTAG pin state*/
 unsigned int g_usCpu_Frequency  = CPU_FREQ_MH_CONFIG; /*Enter your CPU frequency here, unit in MHz.*/
-
+unsigned short g_usIdleTime = 0; /* Idle time to slow down TCK by half for each 1 increasing. */
 /*********************************************************************************
 * This is the definition of the bit locations of each respective
 * signal in the global variable g_siIspPins.
@@ -173,7 +173,7 @@ unsigned char readPort()
 *********************************************************************************/
 void sclock()
 {
-    unsigned short IdleTime    = 0; //change to > 0 if need to slow down TCK
+    unsigned short IdleTime    = g_usIdleTime; //change to > 0 if need to slow down TCK
     unsigned short usIdleIndex = 0;
     IdleTime++;
     for ( usIdleIndex = 0; usIdleIndex < IdleTime; usIdleIndex++ ) {

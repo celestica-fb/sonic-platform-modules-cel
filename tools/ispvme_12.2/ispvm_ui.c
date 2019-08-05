@@ -129,6 +129,7 @@ extern void writePort( unsigned long a_ucPins, unsigned char a_ucValue );
 extern unsigned int g_usCpu_Frequency;
 extern unsigned long g_ucInPort;
 extern unsigned long g_ucOutPort;
+extern unsigned short g_usIdleTime;
 
 /***************************************************************
 *
@@ -712,6 +713,8 @@ void print_usage(char *app_name){
     printf(" -c : to select the JTAG chain 0,1,2\n");
     printf("      default is at 0.\n");
     printf(" -f : to specify CPU clock frequency in MHz.\n");
+    printf(" -i : to specify TCK idle time 0,1,2,...\n");
+    printf("      each 1 value increase, slow TCK down by half.\n");
 }
 
 /***************************************************************
@@ -724,6 +727,8 @@ int main( int argc, char * argv[] )
     short siRetCode                   = 0;
     short sicalibrate                 = 1;
     short setCpuFrequency             = 0;
+    short setIdleTime                 = 0;
+    int idleValue                     = 0;
     char siFailReason[24];
 
     char *cpld_img = "cpld.vme";
@@ -738,9 +743,9 @@ int main( int argc, char * argv[] )
     vme_out_string( VME_VERSION_NUMBER );
     vme_out_string(" Copyright 1998-2011.\n");
     vme_out_string( "\nFor daisy chain programming of all in-system programmable devices\n" );
-    vme_out_string( "\nCLS internal version 1.1.1 for Phalanx, Fishbone48, and Fishbone32.\n\n" );
+    vme_out_string( "\nCLS internal version 1.1.2 for Phalanx, Fishbone48, and Fishbone32.\n\n" );
 
-    while( ( option = getopt(argc, argv, "f:c:h")) != -1 ){
+    while( ( option = getopt(argc, argv, "f:c:i:h")) != -1 ){
         switch (option){
             case 'h':
                 print_usage(argv[0]);
@@ -753,6 +758,11 @@ int main( int argc, char * argv[] )
                 // set CPU frequency
                 g_usCpu_Frequency = atoi(optarg);
                 setCpuFrequency = 1;
+                break;
+            case 'i':
+                // set idel time
+                idleValue = atoi(optarg);
+                setIdleTime = 1;
                 break;
             case '?':
                 print_usage(argv[0]);
@@ -775,6 +785,15 @@ int main( int argc, char * argv[] )
         printf("Invalid CPU frequency specify: %d\n", g_usCpu_Frequency);
         print_usage(argv[0]);
         return -1;
+    }
+
+    if( idleValue < 0 && setIdleTime ){
+        //print usage and return error
+        printf("Invalid TCK idle time specify: %d\n", idleValue);
+        print_usage(argv[0]);
+        return -1;
+    }else{
+        g_usIdleTime = idleValue;
     }
 
     if (iopl(3))
@@ -858,6 +877,9 @@ int main( int argc, char * argv[] )
     g_ucOutPort = GP_LVL;
 
     printf("Set CPU frequency to %d MHz\n", g_usCpu_Frequency);
+    if (setIdleTime){
+        printf("Set TCK IdleTime value to %d\n", g_usIdleTime );
+    }
 
     siRetCode = 0;
     if(sicalibrate)
