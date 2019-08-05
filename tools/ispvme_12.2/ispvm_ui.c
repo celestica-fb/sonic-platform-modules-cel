@@ -89,6 +89,7 @@ void print_usage(char *app_name);
 unsigned short g_usPreviousSize = 0;
 unsigned short g_usExpectedCRC = 0;
 static unsigned long vme_file_size = 0;
+static long g_offset = 0;
 
 /***************************************************************
 *
@@ -156,7 +157,6 @@ unsigned char GetByte()
 {
     unsigned char ucData = 0;
     /* Prepare progress bar calculation */
-    static long offset = 0;
     int pec = 0;
     long file_size = isp_vme_file_size_get();
     int bytes_pec = (file_size + 99) / 100;
@@ -213,10 +213,10 @@ unsigned char GetByte()
 
         ucData = (unsigned char)fgetc( g_pVMEFile );
         /* Update the progress bar */
-        pec = ++offset / bytes_pec;
-        if(offset <= (pec * bytes_pec))
+        pec = ++g_offset / bytes_pec;
+        if(g_offset <= (pec * bytes_pec))
             isp_print_progess_bar(pec);
-        else if(offset >= (file_size - 2))
+        else if(g_offset >= (file_size - 2))
             isp_print_progess_bar(100);
         if ( feof( g_pVMEFile ) ) {
 
@@ -734,6 +734,8 @@ int main( int argc, char * argv[] )
     char *cpld_img = "cpld.vme";
     int JTAG_chain = 0;
     int option;
+    int iMaxRetry = 20;
+
     //08/28/08 NN Added Calculate checksum support.
     g_usChecksum = 0;
     g_uiChecksumIndex = 0;
@@ -892,7 +894,16 @@ int main( int argc, char * argv[] )
     printf( "%s",cpld_img);
     printf(")......\n\n");
     isp_vme_file_size_set(cpld_img);
-    siRetCode = ispVM(cpld_img);
+
+/* NOTE: Larry request to add 20 times retry here.
+ *       Carefull to refresh the global variables.
+ */
+    do {
+        g_offset = 0;
+        siRetCode = ispVM(cpld_img);
+        iMaxRetry--;
+    } while (siRetCode < 0 && iMaxRetry > 0);
+
 
     /* Set JTAG chain muxes to default chain. */
     // Set GPIO70 to Low
