@@ -23,13 +23,13 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 usage() {
-    echo "Usage: $prog <command>"
+    echo "Usage: power <command>"
     echo
     echo "Commands:"
     echo
-    echo "  cpu cycle:  To power cycle the CPU"
+    echo "  cycle cpu:  To power cycle the CPU"
     echo
-    echo "  system reboot : To reboot the whole system"
+    echo "  cycle system : To reboot the whole system"
     echo
 }
 
@@ -43,12 +43,12 @@ cpu_cycle() {
     return 0
 }
 
-system_reboot() {
-    echo "Rebooting system..."
+system_cycle() {
+    echo "Power cycling system..."
     curl -m 5 -d '{"data":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on;reboot"}' http://240.1.1.1:8080/api/sys/raw
     ret=$?
     if [ $ret -ne 0 ]; then
-        echo "Failed to reboot the system"
+        echo "Failed to power cycle the system"
     fi
     return 0
 }
@@ -58,26 +58,18 @@ if [ $# -lt 1 ]; then
     exit -1
 fi
 
-unit="$1"
-command="$2"
+command="$1"
+component="$2"
 shift
 
-case "$unit" in
-cpu)
-    case "$command" in
-    cycle)
+case "$command" in
+cycle)
+    case "$component" in
+    cpu)
         cpu_cycle
         ;;
-    *)
-        usage
-        exit -1
-        ;;
-    esac
-    ;;
-system)
-    case "$command" in
-    reboot)
-        system_reboot
+    system)
+        system_cycle
         ;;
     *)
         usage
