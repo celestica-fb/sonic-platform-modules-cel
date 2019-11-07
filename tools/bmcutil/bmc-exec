@@ -15,7 +15,7 @@
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
 
-prog="$0"
+command="$@"
 
 usage() {
     echo "Usage: bmc-exec <command>"
@@ -23,10 +23,14 @@ usage() {
 }
 
 run_cmd() {
-    curl -m 5 -d '{"data":"'$*'"}' http://240.1.1.1:8080/api/sys/raw
-    ret=$?
-    if [ $ret -ne 0 ]; then
-       echo "Failed to run command on BMC"
+    echo "Run command: "$command
+    echo
+    ret=$(curl -m 5 --silent --header "Content-Type:application/json" -d "{\"data\": \"${command}\"}" http://240.1.1.1:8080/api/sys/raw)
+    if [ -z "$ret" ];
+    then
+        echo "Failed to connect on BMC"
+    else
+        echo $ret | python -c "import sys, json; k = json.load(sys.stdin)['result']; print k if type(k) is not list else '\n'.join(k);"
     fi
     return 0
 }
