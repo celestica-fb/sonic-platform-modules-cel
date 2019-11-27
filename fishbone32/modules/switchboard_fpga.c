@@ -24,7 +24,7 @@
  */
 
 #ifndef TEST_MODE
-#define MOD_VERSION "0.5.0"
+#define MOD_VERSION "0.5.1"
 #else
 #define MOD_VERSION "TEST"
 #endif
@@ -363,6 +363,8 @@ static struct device* fpgafwdev = NULL;    // < The device-driver device struct 
 static struct mutex fpga_i2c_master_locks[I2C_MASTER_CH_TOTAL];
 /* Store lasted switch address and channel */
 static uint16_t fpga_i2c_lasted_access_port[I2C_MASTER_CH_TOTAL];
+static int nack_retry[I2C_MASTER_CH_TOTAL];
+static int need_retry[I2C_MASTER_CH_TOTAL];
 
 enum PORT_TYPE {
     NONE,
@@ -1132,11 +1134,10 @@ static int i2c_core_init(unsigned int master_bus, unsigned int freq_div,void __i
 
     // Makes sure core is disable
     ctrl = ioread8(pci_bar + REG_CTRL);
-    iowrite8( ctrl & ~(1 << I2C_CTRL_EN | 1 << I2C_CTRL_IEN), pci_bar + REG_CTRL);
+    iowrite8( ctrl & ~(1 << I2C_CTRL_EN), pci_bar + REG_CTRL);
     iowrite8( freq_div & 0xFF , pci_bar + REG_FREQ_L);
     iowrite8( freq_div >> 8, pci_bar + REG_FREQ_H);
-    iowrite8(1 << I2C_CMD_IACK, pci_bar + REG_CMD);
-    iowrite8(1 << I2C_CTRL_EN | 1 << I2C_CTRL_IEN, pci_bar + REG_CTRL);
+    iowrite8(1 << I2C_CTRL_EN, pci_bar + REG_CTRL);
 
     return 0;
 }
@@ -1146,7 +1147,7 @@ static void i2c_core_deinit(unsigned int master_bus,void __iomem *pci_bar){
     unsigned int REG_CTRL;
     REG_CTRL = I2C_MASTER_CTRL + (master_bus - 1) * 0x20;
     // Disable core
-    iowrite8( ioread8(pci_bar + REG_CTRL) & ~(1 << I2C_CTRL_EN| 1 << I2C_CTRL_IEN), pci_bar + REG_CTRL);
+    iowrite8( ioread8(pci_bar + REG_CTRL) & ~(1 << I2C_CTRL_EN), pci_bar + REG_CTRL);
 }
 
 //FIXME: The hard code seperater below will causing bug!
@@ -1216,23 +1217,29 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     while (1) {
         Status = ioread8(pci_bar + REG_STAT);
         dev_dbg(&a->dev,"ST:%2.2X\n", Status);
-        if (jiffies > timeout) {
+
+        if ( (Status & ( 1 << I2C_STAT_TIP ))  == 0 ) 
+        {
+            dev_dbg(&a->dev,"  ST:%2.2X\n", Status);
+            break;
+        }
+
+        if (time_after(jiffies, timeout)) {
             info("Status %2.2X", Status);
             info("Error Timeout");
             error = -ETIMEDOUT;
             break;
         }
 
-        if ( Status & ( 1 << I2C_STAT_IF ) ) {
-            dev_dbg(&a->dev,"  IF:%2.2X\n", Status);
-            break;
-        }
+        cpu_relax();
+        cond_resched();
     }
     info("Status %2.2X", Status);
     info("STA:%x",Status);
 
     if (error < 0) {
         info("Status %2.2X", Status);
+
         return error;
     }
 
@@ -1243,6 +1250,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     // Arbitration lost
     if (Status & (1 << I2C_STAT_AL)) {
         info("Error arbitration lost");
+        nack_retry[master_bus - 1] = 1;
         return -EBUSY;
     }
 
@@ -1251,10 +1259,75 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
         info( "SL No ACK");
         if (writing) {
             info("Error No ACK");
+            nack_retry[master_bus - 1] = 1;
             return -EIO;
         }
     } else {
         info( "SL ACK");
+    }
+
+    return error;
+}
+
+static int i2c_wait_stop(struct i2c_adapter *a, unsigned long timeout, int writing) {
+    int error = 0;
+    int Status;
+
+    struct i2c_dev_data *new_data = i2c_get_adapdata(a);
+    void __iomem *pci_bar = fpga_dev.data_base_addr;
+
+    unsigned int REG_FREQ_L;
+    unsigned int REG_FREQ_H;
+    unsigned int REG_CMD;
+    unsigned int REG_CTRL;
+    unsigned int REG_STAT;
+    unsigned int REG_DATA;
+
+    unsigned int master_bus = new_data->pca9548.master_bus;
+
+    if (master_bus < I2C_MASTER_CH_1 || master_bus > I2C_MASTER_CH_TOTAL) {
+        error = -EINVAL;
+        return error;
+    }
+
+    REG_FREQ_L = I2C_MASTER_FREQ_L  + (master_bus - 1) * 0x20;
+    REG_FREQ_H = I2C_MASTER_FREQ_H  + (master_bus - 1) * 0x20;
+    REG_CTRL   = I2C_MASTER_CTRL    + (master_bus - 1) * 0x20;
+    REG_CMD    = I2C_MASTER_CMD     + (master_bus - 1) * 0x20;
+    REG_STAT   = I2C_MASTER_STATUS  + (master_bus - 1) * 0x20;
+    REG_DATA   = I2C_MASTER_DATA    + (master_bus - 1) * 0x20;
+
+    check(pci_bar + REG_STAT);
+    check(pci_bar + REG_CTRL);
+
+    dev_dbg(&a->dev,"ST:%2.2X\n", ioread8(pci_bar + REG_STAT));
+    timeout = jiffies + msecs_to_jiffies(timeout);
+    while (1) {
+        Status = ioread8(pci_bar + REG_STAT);
+        dev_dbg(&a->dev,"ST:%2.2X\n", Status);
+        if (time_after(jiffies, timeout)) {
+            info("Status %2.2X", Status);
+            info("Error Timeout");
+            error = -ETIMEDOUT;
+            break;
+        }
+        // In STOP state, we wait for busy to be cleared
+        // So we know the STOP was sent successfully.
+        if ( (Status & ( 1 << I2C_STAT_BUSY ))  == 0 ) 
+        {
+            dev_dbg(&a->dev,"  IF:%2.2X\n", Status);
+            break;
+        }
+
+        cpu_relax();
+        cond_resched();
+    }
+    info("Status %2.2X", Status);
+    info("STA:%x",Status);
+
+    if (error < 0) {
+        info("Status %2.2X", Status);
+        return error;
     }
     return 0;
 }
@@ -1303,6 +1376,10 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
            size == 8 ? "I2C_BLOCK_DATA" :  "ERROR"
            , cmd);
 #endif
+
+    master_bus = dev_data->pca9548.master_bus;
+    error = i2c_core_init(master_bus, I2C_DIV_100K, fpga_dev.data_base_addr);
+
     /* Map the size to what the chip understands */
     switch (size) {
     case I2C_SMBUS_QUICK:
@@ -1341,7 +1418,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         // sent device address with Write mode
         iowrite8( (addr << 1) & 0xFE, pci_bar + REG_DATA);
     }
-    iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR, pci_bar + REG_CMD);
 
     info( "MS Start");
 
@@ -1364,7 +1441,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         // sent command code to data register
         iowrite8(cmd, pci_bar + REG_DATA);
         // Start the transfer
-        iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
         info( "MS Send CMD 0x%2.2X", cmd);
 
         // Wait {A}
@@ -1396,7 +1473,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         iowrite8(cnt, pci_bar + REG_DATA);
         //Start the transfer
-        iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
         info( "MS Send CNT 0x%2.2X", cnt);
 
         // Wait {A}
@@ -1427,7 +1504,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
             info("STA:%x", ioread8(pci_bar + REG_STAT) );
             info( "   Data > %2.2X", data->block[bid]);
             iowrite8(data->block[bid], pci_bar + REG_DATA);
-            iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+            iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
 
             // Wait {A}
             // IACK
@@ -1451,7 +1528,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         // sent Address with Read mode
         iowrite8( addr << 1 | 0x1 , pci_bar + REG_DATA);
         // SET START | WRITE
-        iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR, pci_bar + REG_CMD);
 
         // Wait {A}
         error = i2c_wait_ack(adapter, 30, 1);
@@ -1492,14 +1569,18 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
             // Start receive FSM
             if (bid == cnt - 1) {
                 info( "READ NACK");
-                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK, pci_bar + REG_CMD);
             }else{
 
-                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_IACK , pci_bar + REG_CMD);
+                iowrite8(1 << I2C_CMD_RD, pci_bar + REG_CMD);
             }
             
             // Wait {A}
             error = i2c_wait_ack(adapter, 30, 0);
+            if(nack_retry[master_bus - 1] == 1)
+            {
+                need_retry[master_bus - 1] = 1;
+            }
             if (error < 0) {
                 dev_dbg(&adapter->dev,"Receive DATA Error: %d\n", error);
                 goto Done;
@@ -1521,9 +1602,9 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 Done:
     info( "MS STOP");
     // SET STOP
-    iowrite8( 1 << I2C_CMD_STO | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
-    // Polling for the STO to finish.
-    i2c_wait_ack(adapter, 30, 0);
+    iowrite8( 1 << I2C_CMD_STO, pci_bar + REG_CMD);
+    // Wait for the STO to finish.
+    i2c_wait_stop(adapter, 30, 0);
     check(pci_bar + REG_CTRL);
     check(pci_bar + REG_STAT);
 #ifdef DEBUG_KERN
@@ -1572,6 +1653,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
     if (switch_addr != 0xFF) {
 
         // Check lasted access switch address on a master
+        // Only select new channel of a switch if they are difference from last channel of a switch
         if ( prev_switch != switch_addr && prev_switch != 0 ) {
             // reset prev_port PCA9548 chip
             retry = 3;
@@ -1593,7 +1675,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
                 if(error >= 0){
                     break;
                 }else{
-                    dev_dbg(&adapter->dev,"Failed to deselect ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
+                    dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
                 }
 
             }
@@ -1613,7 +1695,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
                     if(error >= 0){
                         break;
                     }else{
-                        dev_dbg(&adapter->dev,"Failed to deselect ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
+                        dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
                     }
                 }
                 if(retry < 0){
@@ -1626,17 +1708,24 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
     }
 
     // Do SMBus communication
+    nack_retry[master_bus - 1] = 0;
+    need_retry[master_bus - 1] = 0;
     error = smbus_access(adapter, addr, flags, rw, cmd, size, data);
-    if(error == -EBUSY){
+    if((nack_retry[master_bus - 1]==1)&&(need_retry[master_bus - 1]==1))
+        retry = 2000;
+    else
         retry = 5;
-    }
-    // If the first access failed, do retry. Is this neccessary?
-    while( (error < 0)  && retry){
+    // If the first access failed, do retry.
+    while((nack_retry[master_bus - 1]==1)&&retry)
+    {
         retry--;
+        nack_retry[master_bus - 1] = 0;
         dev_dbg(&adapter->dev,"error = %d\n",error);
         error = smbus_access(adapter, addr, flags, rw, cmd, size, data);
         dev_dbg(&adapter->dev,"nack retry = %d\n",retry);
     }
+    nack_retry[master_bus - 1] = 0;
+    need_retry[master_bus - 1] = 0;
 
     retval = error;
 
@@ -2127,7 +2216,7 @@ static int fpga_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
     /* bar0: data mmio region */
     fpga_dev.data_mmio_start = pci_resource_start(pdev, FPGA_PCI_BAR_NUM);
     fpga_dev.data_mmio_len = pci_resource_len(pdev, FPGA_PCI_BAR_NUM);
-    fpga_dev.data_base_addr = pci_iomap(pdev, FPGA_PCI_BAR_NUM, 0);
+    fpga_dev.data_base_addr = ioremap_nocache(fpga_dev.data_mmio_start, fpga_dev.data_mmio_len);
     if (!fpga_dev.data_base_addr) {
         dev_err(dev, "cannot iomap region of size %lu\n",
                 (unsigned long)fpga_dev.data_mmio_len);
