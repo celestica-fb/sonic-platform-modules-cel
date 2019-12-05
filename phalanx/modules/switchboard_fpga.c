@@ -2029,7 +2029,9 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
     calling_name = dev_data->pca9548.calling_name;
 
     // Acquire the master resource.
-    mutex_lock(&fpga_i2c_master_locks[master_bus - 1]);
+    /* DEBUG: Use singe lock for all bus access to i2c-core */
+    //mutex_lock(&fpga_i2c_master_locks[master_bus - 1]);
+    mutex_lock(&fpga_i2c_master_locks[0]);
     prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
     prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
     prev_ch = (unsigned char)(prev_port & 0xFF);
@@ -2179,8 +2181,10 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
     }
 
 
-release_unlock:    
-    mutex_unlock(&fpga_i2c_master_locks[master_bus - 1]);
+release_unlock:
+    /* DEBUG: Use singe lock for all bus access to i2c-core */    
+    //mutex_unlock(&fpga_i2c_master_locks[master_bus - 1]);
+    mutex_unlock(&fpga_i2c_master_locks[0]);
     dev_dbg(&adapter->dev,"switch ch %d of 0x%x -> ch %d of 0x%x\n", prev_ch, prev_switch, channel, switch_addr);
     return retval;
 }
@@ -2929,7 +2933,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.1");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.2");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
