@@ -1694,6 +1694,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     void __iomem *pci_bar;
     unsigned int  portid, master_bus;
     int error_stop = 0;
+    void __iomem *repeat_start[3] = {0};
 
     unsigned int REG_FREQ_L;
     unsigned int REG_FREQ_H;
@@ -1747,7 +1748,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     }
 
     master_bus = dev_data->pca9548.master_bus;
-    error = i2c_core_init(master_bus, I2C_DIV_100K, fpga_dev.data_base_addr);
+    // error = i2c_core_init(master_bus, I2C_DIV_100K, fpga_dev.data_base_addr);
     if (master_bus < I2C_MASTER_CH_1 || master_bus > I2C_MASTER_CH_TOTAL) {
         error = -EINVAL;
         goto Done;
@@ -1896,6 +1897,10 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
         smb_pkg_val[smb_pkg_tai]=( addr << 1 | 0x1);
         smb_pkg_sta[smb_pkg_tai]='s';
+        // print out repeat start DATA and CMD address.
+        repeat_start[0] = pci_bar;
+        repeat_start[1] = pci_bar + REG_DATA;
+        repeat_start[2] = pci_bar + REG_CMD;
 
         // Wait {A}
         error = i2c_wait_ack(adapter, 30, 1);
@@ -1978,13 +1983,19 @@ Done:
     // Polling for the STO to finish.
     error_stop = i2c_wait_ack(adapter, 30, 0);
     if (error_stop < 0) {
-        dev_dbg(&adapter->dev,"STOT Error: %d\n", error_stop);
+        dev_dbg(&adapter->dev,"STOP Error: %d\n", error_stop);
     }
     int j;
     for (j=0; j<smb_pkg_tai; j++){
          pr_debug("Port_%d  %c--0x%02x, err=%d\n", dev_data->portid, smb_pkg_sta[j], smb_pkg_val[j], smb_pkg_ret[j]);
     }
-    pr_debug("Port_%d  stop_err=%d, status=0x%x", dev_data->portid, error_stop, ioread8(pci_bar + REG_STAT));
+    pr_debug("Port_%d  stop_err=%d, status=0x%x, Sr BAR=%p, DAT_ADDR=%p, CMD_ADDR=%p\n", 
+             dev_data->portid, 
+             error_stop, 
+             ioread8(pci_bar + REG_STAT),
+             repeat_start[0], 
+             repeat_start[1],
+             repeat_start[2]);
 
     kfree(smb_pkg_sta);
     kfree(smb_pkg_val);
@@ -2933,7 +2944,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.3");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.4");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
