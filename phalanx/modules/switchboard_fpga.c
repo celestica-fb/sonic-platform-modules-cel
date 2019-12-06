@@ -1522,13 +1522,16 @@ static int i2c_core_init(unsigned int master_bus, unsigned int freq_div,void __i
         return -EINVAL;
     }
 
-    // Makes sure core is disable
+    /* Makes sure core is disable first */
     ctrl = ioread8(pci_bar + REG_CTRL);
     iowrite8( ctrl & ~(1 << I2C_CTRL_EN | 1 << I2C_CTRL_IEN), pci_bar + REG_CTRL);
+
     iowrite8( freq_div & 0xFF , pci_bar + REG_FREQ_L);
     iowrite8( freq_div >> 8, pci_bar + REG_FREQ_H);
+
+    /* Only enable EN bit, we only use polling mode */
     iowrite8(1 << I2C_CMD_IACK, pci_bar + REG_CMD);
-    iowrite8(1 << I2C_CTRL_EN | 1 << I2C_CTRL_IEN, pci_bar + REG_CTRL);
+    iowrite8(1 << I2C_CTRL_EN, pci_bar + REG_CTRL);
 
     return 0;
 }
@@ -1607,6 +1610,12 @@ static int i2c_xcvr_access(u8 register_address, unsigned int portid, u8 *data, c
     return 0;
 }
 
+/* 
+ * We use busy wait here! If the clock stretching happen and ocores 
+ * entering wait state, we might have to extend the timeout value large enough
+ * to cover the clock stretching peroid. This large value will affect the cpu
+ * performance.
+ */
 static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writing) {
     int error = 0;
     int Status;
@@ -1638,7 +1647,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     check(pci_bar + REG_STAT);
     check(pci_bar + REG_CTRL);
 
-    dev_dbg(&a->dev,"ST:%2.2X\n", ioread8(pci_bar + REG_STAT));
+    dev_dbg(&a->dev,"Wait for 0x%2.2X\n", 1 << I2C_STAT_TIP);
     timeout = jiffies + msecs_to_jiffies(timeout);
     while (1) {
         Status = ioread8(pci_bar + REG_STAT);
@@ -1650,8 +1659,9 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
             break;
         }
 
-        if ( Status & ( 1 << I2C_STAT_IF ) ) {
-            dev_dbg(&a->dev,"  IF:%2.2X\n", Status);
+        /* Let's wait for the TIP to be clear before timeout */
+        if ((Status & (1 << I2C_STAT_TIP)) == 0) {
+            dev_dbg(&a->dev,"  TIP cleared:%2.2X\n", Status);
             break;
         }
     }
@@ -1659,7 +1669,8 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     info("STA:%x",Status);
 
     if (error < 0) {
-        info("Status %2.2X", Status);
+        dev_warn(&a->dev, "%s TIMEOUT bit 0x%x not clear in specific time\n",
+                 __func__, (1 << I2C_STAT_TIP));
         return error;
     }
 
@@ -1686,6 +1697,67 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     return 0;
 }
 
+static int i2c_wait_stop(struct i2c_adapter *a, unsigned long timeout, int writing) {
+    int error = 0;
+    int Status;
+
+    struct i2c_dev_data *new_data = i2c_get_adapdata(a);
+    void __iomem *pci_bar = fpga_dev.data_base_addr;
+
+    unsigned int REG_FREQ_L;
+    unsigned int REG_FREQ_H;
+    unsigned int REG_CMD;
+    unsigned int REG_CTRL;
+    unsigned int REG_STAT;
+    unsigned int REG_DATA;
+
+    unsigned int master_bus = new_data->pca9548.master_bus;
+
+    if (master_bus < I2C_MASTER_CH_1 || master_bus > I2C_MASTER_CH_TOTAL) {
+        error = -EINVAL;
+        return error;
+    }
+
+    REG_FREQ_L = I2C_MASTER_FREQ_L  + (master_bus - 1) * 0x20;
+    REG_FREQ_H = I2C_MASTER_FREQ_H  + (master_bus - 1) * 0x20;
+    REG_CTRL   = I2C_MASTER_CTRL    + (master_bus - 1) * 0x20;
+    REG_CMD    = I2C_MASTER_CMD     + (master_bus - 1) * 0x20;
+    REG_STAT   = I2C_MASTER_STATUS  + (master_bus - 1) * 0x20;
+    REG_DATA   = I2C_MASTER_DATA    + (master_bus - 1) * 0x20;
+
+    check(pci_bar + REG_STAT);
+    check(pci_bar + REG_CTRL);
+
+    dev_dbg(&a->dev,"Wait for 0x%2.2X\n", 1 << I2C_STAT_BUSY);
+    timeout = jiffies + msecs_to_jiffies(timeout);
+    while (1) {
+        Status = ioread8(pci_bar + REG_STAT);
+        dev_dbg(&a->dev,"ST:%2.2X\n", Status);
+        if (jiffies > timeout) {
+            info("Status %2.2X", Status);
+            info("Error Timeout");
+            error = -ETIMEDOUT;
+            break;
+        }
+
+        /* Let's wait for the BUSY to be clear before timeout */
+        if ((Status & (1 << I2C_STAT_BUSY)) == 0) {
+            dev_dbg(&a->dev,"  BUSY cleard:%2.2X\n", Status);
+            break;
+        }
+    }
+    info("Status %2.2X", Status);
+    info("STA:%x",Status);
+
+    if (error < 0) {
+        dev_warn(&a->dev, "%s TIMEOUT bit 0x%x not clear in specific time\n",
+                 __func__, (1 << I2C_STAT_BUSY));
+        return error;
+    }
+
+    return 0;
+}
+
 /* SMBUS Xfer for opencore I2C with polling */
 // TODO: Change smbus_xfer to master_xfer - This will support i2c and all smbus emu functions.
 static int smbus_access(struct i2c_adapter *adapter, u16 addr,
@@ -1707,6 +1779,10 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     unsigned int REG_CTRL;
     unsigned int REG_STAT;
     unsigned int REG_DATA;
+    unsigned char *smb_pkg_val=kzalloc(64*sizeof(char), GFP_KERNEL);
+    unsigned char *smb_pkg_sta=kzalloc(64*sizeof(char), GFP_KERNEL);
+    unsigned int *smb_pkg_ret=kzalloc(64*sizeof(int), GFP_KERNEL);
+    int smb_pkg_tai = 0;
 
     REG_FREQ_L = 0;
     REG_FREQ_H = 0;
@@ -1720,10 +1796,6 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     portid = dev_data->portid;
     pci_bar = fpga_dev.data_base_addr;
 
-    unsigned char *smb_pkg_val=kzalloc(64*sizeof(char), GFP_KERNEL);
-    unsigned char *smb_pkg_sta=kzalloc(64*sizeof(char), GFP_KERNEL);
-    unsigned int *smb_pkg_ret=kzalloc(64*sizeof(int), GFP_KERNEL);
-    int smb_pkg_tai=0;
     
 #ifdef DEBUG_KERN
     printk(KERN_INFO "portid %2d|@ 0x%2.2X|f 0x%4.4X|(%d)%-5s| (%d)%-10s|CMD %2.2X "
@@ -1987,8 +2059,8 @@ Done:
     info( "MS STOP");
     // SET STOP
     iowrite8( 1 << I2C_CMD_STO | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
-    // Polling for the STO to finish.
-    error_stop = i2c_wait_ack(adapter, 30, 0);
+    // Polling for the STOP to finish.
+    error_stop = i2c_wait_stop(adapter, 30, 0);
     if (error_stop < 0) {
         dev_dbg(&adapter->dev,"STOP Error: %d\n", error_stop);
     }
@@ -2120,9 +2192,8 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, u16 addr,
     // If the first access failed, do retry.
     while( (error < 0)  && retry){
         retry--;
-        dev_dbg(&adapter->dev,"error = %d\n",error);
+        dev_dbg(&adapter->dev,"error=%d, retry\n",error);
         error = smbus_access(adapter, addr, flags, rw, cmd, size, data);
-        dev_dbg(&adapter->dev,"nack retry = %d\n",retry);
     }
 
     retval = error;
@@ -2951,7 +3022,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.6");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.7");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
