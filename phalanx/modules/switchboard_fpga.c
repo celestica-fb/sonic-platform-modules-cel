@@ -1893,6 +1893,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         // sent Address with Read mode
         iowrite8( addr << 1 | 0x1 , pci_bar + REG_DATA);
+        dev_dbg(&adapter->dev, "Sr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
+        dev_dbg(&adapter->dev, "Sr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
         // SET START | WRITE
         iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
         smb_pkg_val[smb_pkg_tai]=( addr << 1 | 0x1);
@@ -1936,7 +1938,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         }
 
         info( "MS Receive");
-
+        dev_dbg(&adapter->dev, "PSr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
         for (bid = 0; bid < cnt; bid++) {
 
             // Start receive FSM
@@ -2944,7 +2946,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.4");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.5");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
