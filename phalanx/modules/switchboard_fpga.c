@@ -280,10 +280,15 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASK_RXLOS       0
 
 
-/* I2C master clock speed */
-// NOTE: Only I2C clock in normal mode is support here.
+/* 
+ * I2C master clock speed.
+ * NOTE: Only I2C clock in normal mode is support here.
+ * prescale = (ip_clock_khz / (5 * bus_clock_khz)) - 1;
+ *  ip_clock_khz = 62500
+ *  bus_clock_khz = 100
+ */
 enum {
-    I2C_DIV_100K = 0x71,
+    I2C_DIV_100K = 0x7c,
 };
 
 /* I2C Master control register */
@@ -2946,7 +2951,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.5");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.6");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
