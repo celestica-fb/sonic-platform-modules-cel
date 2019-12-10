@@ -8,7 +8,7 @@
 # Should-Stop:
 # Default-Start:     S
 # Default-Stop:      0 6
-# Short-Description: Setup Fishbone48 board.
+# Short-Description: Setup mystone board.
 ### END INIT INFO
 
 case "$1" in
@@ -38,7 +38,7 @@ force-reload|restart)
         ;;
 
 *)
-        echo "Usage: /etc/init.d/platform-modules-fishbone48.init {start|stop}"
+        echo "Usage: /etc/init.d/platform-modules-mystone.init {start|stop}"
         exit 1
         ;;
 esac

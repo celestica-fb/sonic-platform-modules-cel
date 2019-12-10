@@ -29,7 +29,7 @@
 #include <uapi/linux/stat.h>
 #include <linux/string.h>
 
-#define DRIVER_NAME "AS1348f8h.cpldb"
+#define DRIVER_NAME "mystone.cpldb"
 /**
  * CPLD register address for read and write.
  */

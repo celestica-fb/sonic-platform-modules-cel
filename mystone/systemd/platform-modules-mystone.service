@@ -6,8 +6,8 @@ Before=pmon.service
 
 [Service]
 Type=oneshot
-ExecStart=-/etc/init.d/platform-modules-fishbone48 start
-ExecStop=-/etc/init.d/platform-modules-fishbone48 stop
+ExecStart=-/etc/init.d/platform-modules-mystone start
+ExecStop=-/etc/init.d/platform-modules-mystone stop
 RemainAfterExit=yes
 
 [Install]

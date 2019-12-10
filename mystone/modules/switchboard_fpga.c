@@ -14,7 +14,7 @@
  *   \--sys
  *       \--devices
  *            \--platform
- *                \--AS1348f8h.switchboard
+ *                \--mystone.switchboard
  *                    |--FPGA
  *                    |--CPLD1
  *                    |--CPLD2
@@ -56,9 +56,9 @@
 
 static int  majorNumber;
 
-#define CLASS_NAME "fishbone48_fpga"
-#define DRIVER_NAME "AS1348f8h.switchboard"
-#define FPGA_PCI_NAME "fishbone48_fpga_pci"
+#define CLASS_NAME "mystone_fpga"
+#define DRIVER_NAME "mystone.switchboard"
+#define FPGA_PCI_NAME "mystone_fpga_pci"
 #define DEVICE_NAME "fwupgrade"
 
 static bool allow_unsafe_i2c_access;
@@ -459,7 +459,7 @@ static struct fpga_device fpga_dev = {
     .data_mmio_len = 0,
 };
 
-struct fishbone48_fpga_data {
+struct mystone_fpga_data {
     struct device *sff_devices[SFF_PORT_TOTAL];
     struct i2c_client *sff_i2c_clients[SFF_PORT_TOTAL];
     struct i2c_adapter *i2c_adapter[VIRTUAL_I2C_PORT_LENGTH];
@@ -474,7 +474,7 @@ struct sff_device_data {
     enum PORT_TYPE port_type;
 };
 
-struct fishbone48_fpga_data *fpga_data;
+struct mystone_fpga_data *fpga_data;
 
 /*
  * Kernel object for other module drivers.
@@ -1112,7 +1112,7 @@ static struct attribute_group sff_led_test_grp = {
     .attrs = sff_led_test,
 };
 
-static struct device * fishbone48_sff_init(int portid) {
+static struct device * mystone_sff_init(int portid) {
     struct sff_device_data *new_data;
     struct device *new_device;
 
@@ -1822,7 +1822,7 @@ static u32 fpga_i2c_func(struct i2c_adapter *a)
            I2C_FUNC_SMBUS_I2C_BLOCK;
 }
 
-static const struct i2c_algorithm fishbone48_i2c_algorithm = {
+static const struct i2c_algorithm mystone_i2c_algorithm = {
     .smbus_xfer = fpga_i2c_access,
     .functionality  = fpga_i2c_func,
 };
@@ -1837,7 +1837,7 @@ static const struct i2c_algorithm fishbone48_i2c_algorithm = {
  * When bus_number_offset is -1, created adapter with dynamic bus number.
  * Otherwise create adapter at i2c bus = bus_number_offset + portid.
  */
-static struct i2c_adapter * fishbone48_i2c_init(struct platform_device *pdev, int portid, int bus_number_offset)
+static struct i2c_adapter * mystone_i2c_init(struct platform_device *pdev, int portid, int bus_number_offset)
 {
     int error;
 
@@ -1852,7 +1852,7 @@ static struct i2c_adapter * fishbone48_i2c_init(struct platform_device *pdev, in
 
     new_adapter->owner = THIS_MODULE;
     new_adapter->class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
-    new_adapter->algo  = &fishbone48_i2c_algorithm;
+    new_adapter->algo  = &mystone_i2c_algorithm;
     /* If the bus offset is -1, use dynamic bus number */
     if (bus_number_offset == -1) {
         new_adapter->nr = -1;
@@ -1889,7 +1889,7 @@ static struct i2c_adapter * fishbone48_i2c_init(struct platform_device *pdev, in
 };
 
 // I/O resource need.
-static struct resource fishbone48_resources[] = {
+static struct resource mystone_resources[] = {
     {
         .start  = 0x10000000,
         .end    = 0x10001000,
@@ -1897,18 +1897,18 @@ static struct resource fishbone48_resources[] = {
     },
 };
 
-static void fishbone48_dev_release( struct device * dev)
+static void mystone_dev_release( struct device * dev)
 {
     return;
 }
 
-static struct platform_device fishbone48_dev = {
+static struct platform_device mystone_dev = {
     .name           = DRIVER_NAME,
     .id             = -1,
-    .num_resources  = ARRAY_SIZE(fishbone48_resources),
-    .resource       = fishbone48_resources,
+    .num_resources  = ARRAY_SIZE(mystone_resources),
+    .resource       = mystone_resources,
     .dev = {
-        .release = fishbone48_dev_release,
+        .release = mystone_dev_release,
     }
 };
 
@@ -1922,7 +1922,7 @@ static struct i2c_board_info sff8436_eeprom_info[] = {
     { I2C_BOARD_INFO("optoe2", 0x50) }, //For SFP+ w/ sff8472
 };
 
-static int fishbone48_drv_probe(struct platform_device *pdev)
+static int mystone_drv_probe(struct platform_device *pdev)
 {
     struct resource *res;
     int ret = 0;
@@ -1934,7 +1934,7 @@ static int fishbone48_drv_probe(struct platform_device *pdev)
     /* The device class need to be instantiated before this function called */
     BUG_ON(fpgafwclass == NULL);
 
-    fpga_data = devm_kzalloc(&pdev->dev, sizeof(struct fishbone48_fpga_data),
+    fpga_data = devm_kzalloc(&pdev->dev, sizeof(struct mystone_fpga_data),
                              GFP_KERNEL);
 
     if (!fpga_data)
@@ -2080,14 +2080,14 @@ static int fishbone48_drv_probe(struct platform_device *pdev)
                 continue;
             }
         }
-        fpga_data->i2c_adapter[portid_count] = fishbone48_i2c_init(pdev, portid_count, VIRTUAL_I2C_BUS_OFFSET);
+        fpga_data->i2c_adapter[portid_count] = mystone_i2c_init(pdev, portid_count, VIRTUAL_I2C_BUS_OFFSET);
     }
 
     /* Init SFF devices */
     for (portid_count = 0; portid_count < SFF_PORT_TOTAL; portid_count++) {
         struct i2c_adapter *i2c_adap = fpga_data->i2c_adapter[portid_count];
         if (i2c_adap) {
-            fpga_data->sff_devices[portid_count] = fishbone48_sff_init(portid_count);
+            fpga_data->sff_devices[portid_count] = mystone_sff_init(portid_count);
             sff_data = dev_get_drvdata(fpga_data->sff_devices[portid_count]);
             BUG_ON(sff_data == NULL);
             if ( sff_data->port_type == QSFP ) {
@@ -2145,7 +2145,7 @@ static int fishbone48_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int fishbone48_drv_remove(struct platform_device *pdev)
+static int mystone_drv_remove(struct platform_device *pdev)
 {
     int portid_count;
     struct sff_device_data *rem_data;
@@ -2194,9 +2194,9 @@ static int fishbone48_drv_remove(struct platform_device *pdev)
     return 0;
 }
 
-static struct platform_driver fishbone48_drv = {
-    .probe  = fishbone48_drv_probe,
-    .remove = __exit_p(fishbone48_drv_remove),
+static struct platform_driver mystone_drv = {
+    .probe  = mystone_drv_probe,
+    .remove = __exit_p(mystone_drv_remove),
     .driver = {
         .name   = DRIVER_NAME,
     },
@@ -2257,8 +2257,8 @@ static int fpga_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
     fpga_version = ioread32(fpga_dev.data_base_addr);
     printk(KERN_INFO "FPGA Version : %8.8x\n", fpga_version);
     fpgafw_init();
-    platform_device_register(&fishbone48_dev);
-    platform_driver_register(&fishbone48_drv);
+    platform_device_register(&mystone_dev);
+    platform_driver_register(&mystone_drv);
     return 0;
 
 pci_release:
@@ -2270,8 +2270,8 @@ pci_disable:
 
 static void fpga_pci_remove(struct pci_dev *pdev)
 {
-    platform_driver_unregister(&fishbone48_drv);
-    platform_device_unregister(&fishbone48_dev);
+    platform_driver_unregister(&mystone_drv);
+    platform_device_unregister(&mystone_dev);
     fpgafw_exit();
     pci_iounmap(pdev, fpga_dev.data_base_addr);
     pci_release_regions(pdev);
@@ -2405,7 +2405,7 @@ static void fpgafw_exit(void) {
     printk(KERN_INFO "Goodbye!\n");
 }
 
-int fishbone48_init(void)
+int mystone_init(void)
 {
     int rc;
     rc = pci_register_driver(&pci_dev_ops);
@@ -2414,13 +2414,13 @@ int fishbone48_init(void)
     return 0;
 }
 
-void fishbone48_exit(void)
+void mystone_exit(void)
 {
     pci_unregister_driver(&pci_dev_ops);
 }
 
-module_init(fishbone48_init);
-module_exit(fishbone48_exit);
+module_init(mystone_init);
+module_exit(mystone_exit);
 
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
