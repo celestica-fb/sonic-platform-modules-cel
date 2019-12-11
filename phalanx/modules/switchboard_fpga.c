@@ -79,7 +79,7 @@ static void fpgafw_exit(void);
 ========================================
 FPGA PCIe BAR 0 Registers
 ========================================
-Misc Control    0x00000000 – 0x000000FF
+Misc Control    0x00000000 - 0x000000FF
 I2C_CH1         0x00000800 - 0x0000081C
 I2C_CH2         0x00000820 - 0x0000083C
 I2C_CH3         0x00000840 - 0x0000085C
@@ -1760,6 +1760,13 @@ static int i2c_wait_stop(struct i2c_adapter *a, unsigned long timeout, int writi
     return 0;
 }
 
+/* Read debug register 32 bits */
+static void read_debug(unsigned int *p, unsigned int master_bus, void __iomem* addr){
+    if (master_bus == 11 || master_bus == 12){
+        *p = ioread32(addr);    
+    }
+}
+
 /* SMBUS Xfer for opencore I2C with polling */
 // TODO: Change smbus_xfer to master_xfer - This will support i2c and all smbus emu functions.
 static int smbus_access(struct i2c_adapter *adapter, u16 addr,
@@ -1782,10 +1789,13 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     unsigned int REG_CTRL;
     unsigned int REG_STAT;
     unsigned int REG_DATA;
+    void __iomem * REG_DEBUG;
+    
     unsigned char *smb_pkg_val =  kzalloc(64*sizeof(char), GFP_KERNEL);
     unsigned char *smb_pkg_sta = kzalloc(64*sizeof(char), GFP_KERNEL);
     unsigned int *smb_pkg_ret = kzalloc(64*sizeof(int), GFP_KERNEL);
     int *smb_pkg_stat = kzalloc(64*sizeof(int), GFP_KERNEL);
+    unsigned int *smb_debug_cmd_dat=kzalloc(64*sizeof(unsigned int), GFP_KERNEL);
     int smb_pkg_tai = 0;
 
     REG_FREQ_L = 0;
@@ -1794,11 +1804,13 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     REG_CMD    = 0;
     REG_STAT   = 0;
     REG_DATA   = 0;
-
+    REG_DEBUG  = 0;
+    
     /* Write the command register */
     dev_data = i2c_get_adapdata(adapter);
     portid = dev_data->portid;
     pci_bar = fpga_dev.data_base_addr;
+    master_bus = dev_data->pca9548.master_bus;
 
     
 #ifdef DEBUG_KERN
@@ -1828,7 +1840,6 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         goto Done;
     }
 
-    master_bus = dev_data->pca9548.master_bus;
     // error = i2c_core_init(master_bus, I2C_DIV_100K, fpga_dev.data_base_addr);
     if (master_bus < I2C_MASTER_CH_1 || master_bus > I2C_MASTER_CH_TOTAL) {
         error = -EINVAL;
@@ -1842,6 +1853,10 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     REG_STAT   = I2C_MASTER_STATUS  + (master_bus - 1) * 0x20;
     REG_DATA   = I2C_MASTER_DATA    + (master_bus - 1) * 0x20;
 
+    REG_DEBUG = pci_bar + 0x04;
+
+    
+    
     ////[S][ADDR/R]
     if (rw == I2C_SMBUS_READ &&
             (size == I2C_SMBUS_QUICK || size == I2C_SMBUS_BYTE)) {
@@ -1856,6 +1871,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         smb_pkg_sta[smb_pkg_tai]='S';
     }
     iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
     info( "MS Start");
 
@@ -1880,6 +1896,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         iowrite8(cmd, pci_bar + REG_DATA);
         // Start the transfer
         iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
         info( "MS Send CMD 0x%2.2X", cmd);
         smb_pkg_val[smb_pkg_tai]=cmd;
         smb_pkg_sta[smb_pkg_tai]='C';
@@ -1915,6 +1932,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         iowrite8(cnt, pci_bar + REG_DATA);
         //Start the transfer
         iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
         info( "MS Send CNT 0x%2.2X", cnt);
         smb_pkg_val[smb_pkg_tai]=cnt;
         smb_pkg_sta[smb_pkg_tai]='c';
@@ -1949,6 +1968,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
             info( "   Data > %2.2X", data->block[bid]);
             iowrite8(data->block[bid], pci_bar + REG_DATA);
             iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+            read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
             smb_pkg_val[smb_pkg_tai]=data->block[bid];
             smb_pkg_sta[smb_pkg_tai]='w';
 
@@ -1977,10 +1998,10 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         // sent Address with Read mode
         iowrite8( addr << 1 | 0x1 , pci_bar + REG_DATA);
-        dev_dbg(&adapter->dev, "Sr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
-        dev_dbg(&adapter->dev, "Sr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
         // SET START | WRITE
         iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
         smb_pkg_val[smb_pkg_tai]=( addr << 1 | 0x1);
         smb_pkg_sta[smb_pkg_tai]='s';
         // print out repeat start DATA and CMD address.
@@ -2022,16 +2043,17 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         }
 
         info( "MS Receive");
-        dev_dbg(&adapter->dev, "PSr DAT=%x\n" ,ioread8(pci_bar + REG_DATA));
         for (bid = 0; bid < cnt; bid++) {
 
             // Start receive FSM
             if (bid == cnt - 1) {
                 info( "READ NACK");
                 iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+                read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
             }else{
 
                 iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_IACK , pci_bar + REG_CMD);
+                read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
             }
             
             // Wait {A}
@@ -2066,6 +2088,8 @@ Done:
     info( "MS STOP");
     // SET STOP
     iowrite8( 1 << I2C_CMD_STO | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
     // Polling for the STOP to finish.
     error_stop = i2c_wait_stop(adapter, 30, 0, &smb_pkg_stat[smb_pkg_tai]);
     if (error_stop < 0) {
@@ -2090,6 +2114,7 @@ Done:
     kfree(smb_pkg_val);
     kfree(smb_pkg_ret);
     kfree(smb_pkg_stat);
+    kfree(smb_debug_cmd_dat);
 
     check(pci_bar + REG_CTRL);
     check(pci_bar + REG_STAT);
@@ -3034,7 +3059,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_1.7 status check");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen CMD/STAT latch DB_1.8");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
