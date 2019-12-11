@@ -1635,7 +1635,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
 
     dev_dbg(&a->dev,"ST:%2.2X\n", ioread8(pci_bar + REG_STAT));
     timeout = jiffies + msecs_to_jiffies(timeout);
-    udelay(100);
+    udelay(30);
     while (1) {
         Status = ioread8(pci_bar + REG_STAT);
         dev_dbg(&a->dev,"ST:%2.2X\n", Status);
@@ -1682,7 +1682,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     return 0;
 }
 
-/* Read debug register 32 bits*/
+/* Read debug register 32 bits */
 static void read_debug(unsigned int *p, unsigned int master_bus, void __iomem* addr){
     if (master_bus == 11 || master_bus == 12){
         *p = ioread32(addr);    
@@ -1791,7 +1791,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         smb_pkg_val[smb_pkg_tai]=((addr << 1) & 0xFE);
         smb_pkg_sta[smb_pkg_tai]='S';
     }
-    iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR, pci_bar + REG_CMD);
     read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
     info( "MS Start");
@@ -1816,7 +1817,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         // sent command code to data register
         iowrite8(cmd, pci_bar + REG_DATA);
         // Start the transfer
-        iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
         read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
         info( "MS Send CMD 0x%2.2X", cmd);
         smb_pkg_val[smb_pkg_tai]=cmd;
@@ -1852,7 +1854,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         iowrite8(cnt, pci_bar + REG_DATA);
         //Start the transfer
-        iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
         read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
         info( "MS Send CNT 0x%2.2X", cnt);
@@ -1888,7 +1891,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
             info("STA:%x", ioread8(pci_bar + REG_STAT) );
             info( "   Data > %2.2X", data->block[bid]);
             iowrite8(data->block[bid], pci_bar + REG_DATA);
-            iowrite8(1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+            iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+            iowrite8(1 << I2C_CMD_WR, pci_bar + REG_CMD);
             read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
             smb_pkg_val[smb_pkg_tai]=data->block[bid];
@@ -1918,7 +1922,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         // sent Address with Read mode
         iowrite8( addr << 1 | 0x1 , pci_bar + REG_DATA);
         // SET START | WRITE
-        iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+        iowrite8( 1 << I2C_CMD_STA | 1 << I2C_CMD_WR, pci_bar + REG_CMD);
         read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
         smb_pkg_val[smb_pkg_tai]=( addr << 1 | 0x1);
@@ -1967,12 +1972,13 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
             // Start receive FSM
             if (bid == cnt - 1) {
                 info( "READ NACK");
-                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+                iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK, pci_bar + REG_CMD);
                 read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
             }else{
-
-                iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_IACK , pci_bar + REG_CMD);
+                iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+                iowrite8(1 << I2C_CMD_RD, pci_bar + REG_CMD);
                 read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
             }
@@ -2008,7 +2014,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 Done:
     info( "MS STOP");
     // SET STOP
-    iowrite8( 1 << I2C_CMD_STO | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    iowrite8( 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
+    iowrite8( 1 << I2C_CMD_STO, pci_bar + REG_CMD);
     read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
     // Polling for the STO to finish.
@@ -2986,7 +2993,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen add status printout DB_2.8");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen add status printout DB_2.9");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
