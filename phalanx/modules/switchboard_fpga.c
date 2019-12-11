@@ -1602,7 +1602,7 @@ static int i2c_xcvr_access(u8 register_address, unsigned int portid, u8 *data, c
     return 0;
 }
 
-static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writing) {
+static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writing, int * status) {
     int error = 0;
     int Status;
 
@@ -1652,7 +1652,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     }
     info("Status %2.2X", Status);
     info("STA:%x",Status);
-
+    *status = Status;
     if (error < 0) {
         info("Status %2.2X", Status);
         return error;
@@ -1702,6 +1702,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     unsigned int  portid, master_bus;
     int error_stop = 0;
     void __iomem *repeat_start[3] = {0};
+    unsigned char pre_rep_stat = 0;
 
     unsigned int REG_FREQ_L;
     unsigned int REG_FREQ_H;
@@ -1723,11 +1724,13 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
     dev_data = i2c_get_adapdata(adapter);
     portid = dev_data->portid;
     pci_bar = fpga_dev.data_base_addr;
+    master_bus = dev_data->pca9548.master_bus;
 
     unsigned char *smb_pkg_val=kzalloc(64*sizeof(unsigned char), GFP_KERNEL);
     unsigned char *smb_pkg_sta=kzalloc(64*sizeof(unsigned char), GFP_KERNEL);
     unsigned int *smb_pkg_ret=kzalloc(64*sizeof(unsigned int), GFP_KERNEL);
     unsigned int *smb_debug_cmd_dat=kzalloc(64*sizeof(unsigned int), GFP_KERNEL);
+    int *smb_status_buf=kzalloc(64*sizeof(int), GFP_KERNEL);
     int smb_pkg_tai=0;
     
 #ifdef DEBUG_KERN
@@ -1757,8 +1760,6 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         goto Done;
     }
 
-    master_bus = dev_data->pca9548.master_bus;
-    // error = i2c_core_init(master_bus, I2C_DIV_100K, fpga_dev.data_base_addr);
     if (master_bus < I2C_MASTER_CH_1 || master_bus > I2C_MASTER_CH_TOTAL) {
         error = -EINVAL;
         goto Done;
@@ -1782,6 +1783,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         iowrite8( (addr << 1) | 0x01, pci_bar + REG_DATA);
         smb_pkg_val[smb_pkg_tai]=((addr << 1) | 0x01);
         smb_pkg_sta[smb_pkg_tai]='S';
+
     } else {
         // sent device address with Write mode
         iowrite8( (addr << 1) & 0xFE, pci_bar + REG_DATA);
@@ -1795,7 +1797,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
     //// Wait {A}
     // + IACK
-    error = i2c_wait_ack(adapter, 30, 1);
+    error = i2c_wait_ack(adapter, 30, 1, &smb_status_buf[smb_pkg_tai]);
     smb_pkg_ret[smb_pkg_tai++] = error;
     if (error < 0) {
         info( "get error %d", error);
@@ -1821,7 +1823,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         // Wait {A}
         // IACK
-        error = i2c_wait_ack(adapter, 30, 1);
+        error = i2c_wait_ack(adapter, 30, 1, &smb_status_buf[smb_pkg_tai]);
         smb_pkg_ret[smb_pkg_tai++] = error;
         if (error < 0) {
             info( "get error %d", error);
@@ -1858,7 +1860,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
         // Wait {A}
         // IACK
-        error = i2c_wait_ack(adapter, 30, 1);
+        error = i2c_wait_ack(adapter, 30, 1, &smb_status_buf[smb_pkg_tai]);
         smb_pkg_ret[smb_pkg_tai++] = error;
         if (error < 0) {
             info( "get error %d", error);
@@ -1893,7 +1895,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
 
             // Wait {A}
             // IACK
-            error = i2c_wait_ack(adapter, 30, 1);
+            error = i2c_wait_ack(adapter, 30, 1, &smb_status_buf[smb_pkg_tai]);
             smb_pkg_ret[smb_pkg_tai++] = error;
             if (error < 0) {
                 dev_dbg(&adapter->dev,"Send DATA Error: %d\n", error);
@@ -1910,7 +1912,8 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
                 size == I2C_SMBUS_I2C_BLOCK_DATA
             )) {
         info( "MS Repeated Start");
-
+        /* Collect STATUS before Repeat Start */
+        pre_rep_stat = ioread8(pci_bar + REG_STAT);
         // sent Address with Read mode
         iowrite8( addr << 1 | 0x1 , pci_bar + REG_DATA);
         // SET START | WRITE
@@ -1925,7 +1928,7 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
         repeat_start[2] = pci_bar + REG_CMD;
 
         // Wait {A}
-        error = i2c_wait_ack(adapter, 30, 1);
+        error = i2c_wait_ack(adapter, 30, 1, &smb_status_buf[smb_pkg_tai]);
         smb_pkg_ret[smb_pkg_tai++] = error;
         if (error < 0) {
             dev_dbg(&adapter->dev,"Repeat START Error: %d\n", error);
@@ -1965,14 +1968,16 @@ static int smbus_access(struct i2c_adapter *adapter, u16 addr,
                 info( "READ NACK");
                 iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_ACK | 1 << I2C_CMD_IACK, pci_bar + REG_CMD);
                 read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
             }else{
 
                 iowrite8(1 << I2C_CMD_RD | 1 << I2C_CMD_IACK , pci_bar + REG_CMD);
                 read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
+
             }
             
             // Wait {A}
-            error = i2c_wait_ack(adapter, 30, 0);
+            error = i2c_wait_ack(adapter, 30, 0, &smb_status_buf[smb_pkg_tai]);
             smb_pkg_sta[smb_pkg_tai]='r';
             if (error < 0) {
                 dev_dbg(&adapter->dev,"Receive DATA Error: %d\n", error);
@@ -2006,18 +2011,26 @@ Done:
     read_debug(&smb_debug_cmd_dat[smb_pkg_tai], master_bus, REG_DEBUG);
 
     // Polling for the STO to finish.
-    error_stop = i2c_wait_ack(adapter, 30, 0);
+    error_stop = i2c_wait_ack(adapter, 30, 0, &smb_status_buf[smb_pkg_tai]);
     if (error_stop < 0) {
         dev_dbg(&adapter->dev,"STOP Error: %d\n", error_stop);
     }
     int j;
-    for (j=0; j<smb_pkg_tai; j++){
-         pr_debug("Port_%d  %c--0x%02x, err=%d faga_debug=0x%08x\n", dev_data->portid, smb_pkg_sta[j], smb_pkg_val[j], smb_pkg_ret[j], smb_debug_cmd_dat[j]);
+    for (j=0; j < smb_pkg_tai; j++){
+         pr_debug("Port_%d  %c--0x%02x, err=%d status=0x%02x faga_debug=0x%08x\n", 
+                  dev_data->portid,
+                  smb_pkg_sta[j],
+                  smb_pkg_val[j],
+                  smb_pkg_ret[j],
+                  smb_status_buf[j],
+                  smb_debug_cmd_dat[j]);
     }
-    pr_debug("Port_%d  stop_err=%d, status=0x%x, Sr BAR=%p, DAT_ADDR=%p, CMD_ADDR=%p\n", 
+    /* 'status' is a STATUS register printout after finished transaction */
+    pr_debug("Port_%d  stop_err=%d, status=0x%x, rep_stat=%02x, Sr BAR=%p, DAT_ADDR=%p, CMD_ADDR=%p\n", 
              dev_data->portid, 
              error_stop, 
              ioread8(pci_bar + REG_STAT),
+             pre_rep_stat,
              repeat_start[0], 
              repeat_start[1],
              repeat_start[2]);
@@ -2026,6 +2039,7 @@ Done:
     kfree(smb_pkg_val);
     kfree(smb_pkg_ret);
     kfree(smb_debug_cmd_dat);
+    kfree(smb_status_buf);
 
     check(pci_bar + REG_CTRL);
     check(pci_bar + REG_STAT);
@@ -2971,7 +2985,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen DB_2.1");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen add status printout DB_2.7");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
