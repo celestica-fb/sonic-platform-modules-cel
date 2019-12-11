@@ -1635,6 +1635,7 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
 
     dev_dbg(&a->dev,"ST:%2.2X\n", ioread8(pci_bar + REG_STAT));
     timeout = jiffies + msecs_to_jiffies(timeout);
+    udelay(100);
     while (1) {
         Status = ioread8(pci_bar + REG_STAT);
         dev_dbg(&a->dev,"ST:%2.2X\n", Status);
@@ -2985,7 +2986,7 @@ module_exit(phalanx_exit);
 module_param(allow_unsafe_i2c_access, bool, 0400);
 MODULE_PARM_DESC(allow_unsafe_i2c_access, "enable i2c busses despite potential races against BMC bus access");
 
-MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen add status printout DB_2.7");
+MODULE_AUTHOR("Pradchaya P. <pphuchar@celestica.com> XiaoShen add status printout DB_2.8");
 MODULE_DESCRIPTION("Celestica phalanx switchboard platform driver");
 MODULE_VERSION(MOD_VERSION);
 MODULE_LICENSE("GPL");
