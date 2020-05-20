@@ -31,7 +31,7 @@
 /var/log/cron.log
 /var/log/syslog
 {
-    size 10M
+    size 20M
     rotate 20
     missingok
     notifempty
