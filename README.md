@@ -1,1 +1,1 @@
-Platform drivers of Celestica products for the SONiC project
+Platform drivers of Celestica products for the SONiC project (Deprecated)
