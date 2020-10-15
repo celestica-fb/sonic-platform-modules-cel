@@ -1,0 +1,5 @@
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/migaloo/modules/mc24lc64t.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/migaloo/modules/baseboard_cpld.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/migaloo/modules/switchboard_fpga.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/migaloo/modules/dimm-bus.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/migaloo/modules/i2c-imc.ko

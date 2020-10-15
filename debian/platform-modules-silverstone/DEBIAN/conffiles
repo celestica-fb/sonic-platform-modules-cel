@@ -1,0 +1,2 @@
+/etc/init.d/platform-modules-silverstone
+/etc/modules-load.d/silverstone-modules.conf

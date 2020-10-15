@@ -1,0 +1,5 @@
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/jaws/modules/mc24lc64t.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/jaws/modules/baseboard_cpld.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/jaws/modules/switchboard_fpga.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/jaws/modules/i2c-imc.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/jaws/modules/dimm-bus.ko

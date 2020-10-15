@@ -1,0 +1,5 @@
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/dx010/modules/dx010_cpld.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/dx010/modules/mc24lc64t.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/dx010/modules/emc2305.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/dx010/modules/dx010_wdt.ko
+kernel//sonic/platform/broadcom/sonic-platform-modules-cel/dx010/modules/leds-dx010.ko

@@ -1,0 +1,1 @@
+cmd_/sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/built-in.o :=  rm -f /sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/built-in.o; ar rcsD /sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/built-in.o
