@@ -1,8 +1,0 @@
-#!/bin/bash
-
-if [ -x "$(command -v ipmitool)" ] ; then
-    ipmitool sdr list
-else
-    echo "ipmitool is not installed"
-
-fi
