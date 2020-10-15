@@ -1,0 +1,10 @@
+Package: platform-modules-jaws
+Source: sonic-cel-platform-modules
+Version: 0.9
+Architecture: amd64
+Maintainer: Abhisit Sangjan <asang@celestica.com>
+Installed-Size: 2167
+Depends: linux-image-4.9.0-11-2-amd64
+Section: main
+Priority: extra
+Description: kernel modules for platform devices such as fan, led, sfp

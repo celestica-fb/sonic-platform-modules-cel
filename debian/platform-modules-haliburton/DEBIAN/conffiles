@@ -1,0 +1,3 @@
+/etc/init.d/fancontrol.sh
+/etc/init.d/platform-modules-haliburton
+/etc/modules-load.d/haliburton-modules.conf

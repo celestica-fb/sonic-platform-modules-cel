@@ -1,0 +1,17 @@
+./jaws/cfg/jaws-modules.conf
+./jaws/systemd/platform-modules-jaws.service
+./tools/sync_bmc/bmc_vlan.service
+./tools/sync_bmc/sync_bmc.service
+./tools/sync_bmc/sync_bmc.timer
+./tools/sync_bmc/bmc_vlan.sh
+./tools/sync_bmc/sync_bmc.py
+./tools/platformutil.py
+./tools/read_optic_temp.py
+./tools/bmcutil/bmcpwd
+./tools/bmcutil/bmcutil.py
+./tools/bmcutil/bmc-exec
+./tools/bmc_wdt/bmc_wdt.service
+./tools/bmc_wdt/bmc_wdt.py
+./tools/power_utils/power
+./tools/bmc_console_log/bmc-console-log
+./tools/bmc_console_log/bmc-console-log.service
