@@ -286,8 +286,8 @@ PORT XCVR       0x00004000 - 0x00004FFF
 // NOTE: Only I2C clock in normal mode is support here.
 enum {
     I2C_DIV_100K = 0x71,
-    I2C_DIV_100K = 0x40,
-    I2C_DIV_100K = 0x20,
+    I2C_DIV_200K = 0x40,
+    I2C_DIV_400K = 0x20,
 };
 
 /* I2C Master control register */
