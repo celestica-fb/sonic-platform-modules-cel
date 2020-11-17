@@ -22,7 +22,7 @@ class BmcUtilBase(object):
         self.bmc_pwd_url = "http://240.1.1.1:8080/api/sys/userpassword"
         self.bmc_pwd_path = "/usr/local/etc/bmcpwd"
         self.bmc_syslog_url = "http://240.1.1.1:8080/api/sys/syslog"
-        self.bmc_reboot_url = "http://240.1.1.1:8080/api/bmc/"
+        self.bmc_reboot_url = "http://240.1.1.1:8080/api/bmc/reboot"
 
     def request_data(self, url):
         # Reqest data from BMC if not exist.
