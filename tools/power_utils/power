@@ -58,7 +58,7 @@ function confirm() {
 
 cpu_cycle() {
     echo "Power cycling CPU..."
-    curl -m 5 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on"}' http://240.1.1.1:8080/api/hw/rawcmd
+    curl -m 60 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on"}' http://240.1.1.1:8080/api/hw/rawcmd
     ret=$?
     if [ $ret -ne 0 ]; then
         echo "Failed to power cycle the CPU"
@@ -68,7 +68,7 @@ cpu_cycle() {
 
 system_cycle() {
     echo "Power cycling system..."
-    curl -m 5 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on;reboot"}' http://240.1.1.1:8080/api/hw/rawcmd
+    curl -m 60 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on;reboot"}' http://240.1.1.1:8080/api/hw/rawcmd
     ret=$?
     if [ $ret -ne 0 ]; then
         echo "Failed to power cycle the system"
