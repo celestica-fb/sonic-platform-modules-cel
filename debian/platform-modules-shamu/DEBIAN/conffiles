@@ -1,7 +1,0 @@
-/etc/init.d/platform-modules-shamu
-/etc/modules-load.d/shamu-modules.conf
-/etc/systemd/system/bmc-console-log.service
-/etc/systemd/system/bmc_vlan.service
-/etc/systemd/system/bmc_wdt.service
-/etc/systemd/system/sync_bmc.service
-/etc/systemd/system/sync_bmc.timer

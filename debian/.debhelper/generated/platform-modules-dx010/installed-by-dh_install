@@ -1,5 +1,0 @@
-./dx010/scripts/dx010_check_qsfp.sh
-./dx010/cfg/dx010-modules.conf
-./dx010/systemd/platform-modules-dx010.service
-./dx010/modules/sonic_platform-1.0-py2-none-any.whl
-./services/platform_api/platform_api_mgnt.sh

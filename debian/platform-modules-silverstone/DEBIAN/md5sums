@@ -1,6 +1,0 @@
-eb58d6a722a9e3cda8c15fff5d08f4f8  lib/systemd/system/platform-modules-silverstone.service
-ddbade523b7ad03cd4c9bd1ff686b6d7  usr/bin/sensors
-2c80d5183098ce34129e89c3ebe3b6dc  usr/local/bin/platform_api_mgnt.sh
-59ee03d8c557661926f31343450c9aa7  usr/local/bin/platform_sensors.py
-f424bd303f374f5272d911eacd2bf631  usr/share/doc/platform-modules-silverstone/changelog.gz
-71fa76268f3cfb2cabf1584ebcb3f9f8  usr/share/sonic/device/x86_64-cel_silverstone-r0/sonic_platform-1.0-py2-none-any.whl

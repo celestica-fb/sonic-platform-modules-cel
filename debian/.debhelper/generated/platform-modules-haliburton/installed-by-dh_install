@@ -1,7 +1,0 @@
-./haliburton/cfg/haliburton-modules.conf
-./haliburton/systemd/platform-modules-haliburton.service
-./haliburton/script/fancontrol.sh
-./services/fancontrol/fancontrol.service
-./services/fancontrol/fancontrol
-./haliburton/modules/sonic_platform-1.0-py2-none-any.whl
-./services/platform_api/platform_api_mgnt.sh

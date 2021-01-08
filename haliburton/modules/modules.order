@@ -1,5 +1,0 @@
-kernel//sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/mc24lc64t.ko
-kernel//sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/emc2305.ko
-kernel//sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/smc.ko
-kernel//sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/hlx_gpio_ich.ko
-kernel//sonic/platform/broadcom/sonic-platform-modules-cel/haliburton/modules/dps200.ko

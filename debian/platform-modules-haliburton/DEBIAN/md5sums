@@ -1,6 +1,0 @@
-5eafb4809d0894e61795019f7ffb46bb  lib/systemd/system/fancontrol.service
-13c0832b48c45db4a6b87b486dd7a5d6  lib/systemd/system/platform-modules-haliburton.service
-22786fa5f9bfba8037484185c5d32247  usr/local/bin/fancontrol
-2c80d5183098ce34129e89c3ebe3b6dc  usr/local/bin/platform_api_mgnt.sh
-f424bd303f374f5272d911eacd2bf631  usr/share/doc/platform-modules-haliburton/changelog.gz
-4ea7e03e3e7ec01d26e0d864e5edc34f  usr/share/sonic/device/x86_64-cel_e1031-r0/sonic_platform-1.0-py2-none-any.whl
