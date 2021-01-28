@@ -1,0 +1,3 @@
+0x85d4aefb	pcie_reg32_read	/sonic/platform/broadcom/sonic-platform-modules-alibaba/common/modules/fpga_pcie	EXPORT_SYMBOL
+0x2b741cb4	pcie_reg32_write	/sonic/platform/broadcom/sonic-platform-modules-alibaba/common/modules/fpga_pcie	EXPORT_SYMBOL
+0xbba1a024	fpga_pca9548_reset	/sonic/platform/broadcom/sonic-platform-modules-alibaba/common/modules/fpga_pcie	EXPORT_SYMBOL
