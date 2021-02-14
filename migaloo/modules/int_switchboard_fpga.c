@@ -2403,6 +2403,11 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
     }
     adapter = master_adapter;
 
+	mutex_lock(&fpga_i2c_master_locks[master_bus - 1]);
+	prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
+	prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
+	prev_ch = (unsigned char)(prev_port & 0xFF);
+
     if (switch_addr != 0xFF) {
 
         // Check lasted access switch address on a master
@@ -3487,16 +3492,16 @@ int th4_init(void)
     bool get_done = 0;
     uint32_t fpga_version = 0, reg_val;
 
-    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-1-27 10:50");
-#if 1
+    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-2-13");
+
     get_done = ali_ocore_done_status();
     if (!get_done) {
         printk(KERN_INFO "ali_ocore_get not ready! exit.\n");
         return -ENODEV;
     } else {
-             printk(KERN_INFO "ali_ocore_get ready!\n");
-        }
-#endif
+    	printk(KERN_INFO "ali_ocore_get ready!\n");
+    }
+
     rc = pcie_reg32_read(0x00, &fpga_version);
     if (rc) {
         printk(KERN_INFO "read fpga version failed!, rc=%d\n", rc);
@@ -3511,55 +3516,10 @@ int th4_init(void)
     if ((rc = fpgafw_init()) < 0){
         printk(KERN_INFO "fpgafw_init() failed!\n");
     }
-    /* +++ disable reset signal hold by Ali ko file +++ */
-    rc = pcie_reg32_read(0x0100, &reg_val);
-    if (rc) {
-        printk(KERN_INFO "read fpga reg 0x0100 failed!, rc=%d\n", rc);
-    }
-    reg_val |= 0x03;
-    rc = pcie_reg32_write(0x0100, reg_val);
-    if (rc) {
-        printk(KERN_INFO "write fpga reg 0x0100 failed!, rc=%d\n", rc);
-    }
-    rc = pcie_reg32_read(0x0108, &reg_val);
-    if (rc) {
-        printk(KERN_INFO "read fpga reg 0x0104 failed!, rc=%d\n", rc);
-    }
-    reg_val |= 0x7f;
-    rc = pcie_reg32_write(0x0108, reg_val);
-    if (rc) {
-        printk(KERN_INFO "write fpga reg 0x0108 failed!, rc=%d\n", rc);
-    }
-    rc = pcie_reg32_read(0x010c, &reg_val);
-    if (rc) {
-        printk(KERN_INFO "read fpga reg 0x010c failed!, rc=%d\n", rc);
-    }
-    reg_val |= 0xff;
-    rc = pcie_reg32_write(0x010c, reg_val);
-    if (rc) {
-        printk(KERN_INFO "write fpga reg 0x010c failed!, rc=%d\n", rc);
-    }
-    rc = pcie_reg32_read(0x0110, &reg_val);
-    if (rc) {
-        printk(KERN_INFO "read fpga reg 0x0110 failed!, rc=%d\n", rc);
-    }
-    reg_val |= 0x0f;
-    rc = pcie_reg32_write(0x0110, reg_val);
-    if (rc) {
-        printk(KERN_INFO "write fpga reg 0x0110 failed!, rc=%d\n", rc);
-    }
-    /* return error case this ko not be installed */
-    //return -ENODEV;
-    /* --- disable reset signal hold by Ali ko file --- */
 
     platform_device_register(&th4_dev);
     platform_driver_register(&th4_drv);
 
-#if 0
-    rc = pci_register_driver(&pci_dev_ops);
-    if (rc)
-        return rc;
-#endif
     return 0;
 }
 
