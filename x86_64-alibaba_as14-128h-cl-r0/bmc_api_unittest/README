@@ -1,0 +1,48 @@
+BMC api auto test framework
+
+1.Copy bios,bmc and fpga images to the following path: 
+
+        BMC_IMAGE_PATH = '/home/admin/img/flash-as58xx-cl'
+        BIOS_IMAGE_PATH = '/home/admin/img/bios.bin'
+        FPGA_IMAGE_PATH = '/home/admin/img/fpga.bin'
+
+2. Copy cpld images to the following path: 
+
+        FAN_CPLD = '/home/admin/img/as*_cpld_1_cpu_pwr.vme'
+        BASE_CPLD = '/home/admin/img/as*_cpld_2_cpu_pwr.vme'
+        CPU_CPLD = '/home/admin/img/as*_cpld_3_cpu_pwr.vme'
+        SW_CPLD = '/home/admin/img/as*_cpld_4_cpu_pwr.vme'
+        TOP_LC_CPLD = '/home/admin/img/as*_cpld_5_cpu_pwr.vme'
+        BOT_LC_CPLD = '/home/admin/img/as*_cpld_6_cpu_pwr.vme'
+        FAN_CPLD_REFRESH = '/home/admin/img/as*_cpld_1_transfr_bmc.vme'
+        BASE_CPLD_REFRESH = '/home/admin/img/as*_cpld_2_transfr_bmc.vme'
+
+3.run command : cd /usr/share/sonic/device/x86_64-alibaba_as*-cl-r0/bmc_api_unittest
+4.run the test command:
+
+        - to run auto test without test cases that will cause CPU reboot
+                ./api_unittest
+
+        - to run manual test with test cases that will cause CPU reboot
+
+                1. Modify SKIP_REBOOT_CPU variable on unittest_config.py to False
+
+                2. Run following command
+
+                Note.For each step cpu will be reboot
+        
+                export BMC_TEST_PLATFORM=CEL  
+                ./api_unittest --run-tests test_bmcutil.TestBMCUtil.test_power_cycle_cpu   
+
+                export BMC_TEST_PLATFORM=CEL                                   
+                ./api_unittest --run-tests test_bmcutil.TestBMCUtil.test_power_cycle_system
+
+                export BMC_TEST_PLATFORM=CEL  
+                ./api_unittest --run-tests test_fwmgrutil_refresh.TestFirmwareRefreshUtil.test_firmware_refresh_fpga
+
+                export BMC_TEST_PLATFORM=CEL    
+                ./api_unittest --run-tests test_fwmgrutil_refresh.TestFirmwareRefreshUtil.test_firmware_refresh_bios
+
+                export BMC_TEST_PLATFORM=CEL  
+                ./api_unittest --run-tests test_fwmgrutil_refresh.TestFirmwareRefreshUtil.test_firmware_refresh_cpld
+
