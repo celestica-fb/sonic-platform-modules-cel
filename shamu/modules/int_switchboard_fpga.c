@@ -242,6 +242,7 @@ PORT XCVR       0x00004000 - 0x00004FFF
 */
 #define I2C_XCVR_CTRL      0x11
 #define I2C_CTRL_RST       4
+#define I2C_CTRL_LPMOD     1
 #define I2C_CTRL_MODSEL    0
 #define I2C_CTRL_TXDIS     0
 
@@ -289,6 +290,11 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASK_INT_N       0
 #define I2C_MASK_RXLOS       0
 
+/* PORT CONTROL ENABLE REGISTER
+[31:6]  RSVD
+[7:0]   Port Control         0x4E(default value)
+*/
+#define I2C_XCVR_PORT_CTL        0x15
 
 /* I2C master clock speed */
 // NOTE: Only I2C clock in normal mode is support here.
@@ -1035,6 +1041,43 @@ static ssize_t qsfp_reset_store(struct device *dev, struct device_attribute *att
 }
 DEVICE_ATTR_RW(qsfp_reset);
 
+static ssize_t qsfp_lpmod_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    u8 data;
+    int err;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+    err = i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
+    if(err < 0){
+        return err;
+    }
+    return sprintf(buf, "%d\n", (data >> I2C_CTRL_LPMOD) & 1U);
+}
+
+static ssize_t qsfp_lpmod_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+    ssize_t status;
+    long value;
+    u8 data;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+
+    status = kstrtol(buf, 0, &value);
+    if (status == 0) {
+        // if value is 0, QSFP LPMOD pin is low
+        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
+        if (!value)
+            data = data & ~((u8)0x1 << I2C_CTRL_LPMOD);
+		else
+            data = data | ((u8)0x1 << I2C_CTRL_LPMOD);
+        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
+
+        status = size;
+    }
+    return status;
+}
+DEVICE_ATTR_RW(qsfp_lpmod);
+
 static ssize_t sfp_txdisable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
     u8 data;
@@ -1072,15 +1115,55 @@ static ssize_t sfp_txdisable_store(struct device *dev, struct device_attribute *
 }
 DEVICE_ATTR_RW(sfp_txdisable);
 
+static ssize_t port_ctl_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    u8 data;
+    int err;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+    err = i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
+    if(err < 0){
+        return err;
+    }
+    return sprintf(buf, "0x%X\n", (data) & 0xFF);
+}
+static ssize_t port_ctl_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+    ssize_t status;
+    long value;
+    u8 data;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+
+    mutex_lock(&fpga_data->fpga_lock);
+    status = kstrtol(buf, 0, &value);
+    if (status == 0) {
+		// port control enable register set bits[7:0]=0x59 enable
+        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
+        if (!value)
+            data = (data & 0xFF);
+        else
+            data = (value & 0xFF);
+        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_WRITE);
+		// port control enable register set bits[7:0]=0x4E disable
+        status = size;
+    }
+    mutex_unlock(&fpga_data->fpga_lock);
+    return status;
+}
+DEVICE_ATTR_RW(port_ctl);
+
 static struct attribute *sff_attrs[] = {
     &dev_attr_qsfp_modirq.attr,
     &dev_attr_qsfp_modprs.attr,
     &dev_attr_qsfp_modsel.attr,
     &dev_attr_qsfp_reset.attr,
+    &dev_attr_qsfp_lpmod.attr,
     &dev_attr_sfp_txfault.attr,
     &dev_attr_sfp_rxlos.attr,
     &dev_attr_sfp_modabs.attr,
     &dev_attr_sfp_txdisable.attr,
+    &dev_attr_port_ctl.attr,
     NULL,
 };
 
@@ -1461,10 +1544,10 @@ static int i2c_wait_ack(struct i2c_adapter *a, unsigned long timeout, int writin
     /* +++ add by maxwill for int-mode fpga driver +++ */
     error = wait_event_interruptible_timeout(fpga_irq_wq, fpga_dev.irq_wait_done, timeout);
     if (error <= 0) {
-            dev_err(&a->dev,"wait fpga irq timeout failed!\n");
-            if (error == 0)
-                 error = -ETIMEDOUT;
-            return error;
+        dev_err(&a->dev,"wait fpga irq timeout failed!\n");
+        if (error == 0)
+            error = -ETIMEDOUT;
+        return error;
     }
    /* --- add by maxwill for int-mode fpga driver --- */
     pcie_reg32_read(REG_STAT, &Status);
@@ -1564,18 +1647,17 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                               master_adapter->algo->master_xfer);
 #endif
     if (!master_adapter) {
-         printk(KERN_INFO "fb2_fpga:get master_adapter failed!\n");
-         return -ESHUTDOWN;
+        printk(KERN_INFO "fb2_fpga:get master_adapter failed!\n");
+        return -ESHUTDOWN;
     }
     adapter = master_adapter;
 
-	mutex_lock(&fpga_i2c_master_locks[0]);
-	prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
-	prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
-	prev_ch = (unsigned char)(prev_port & 0xFF);
+    mutex_lock(&fpga_i2c_master_locks[0]);
+    prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
+    prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
+    prev_ch = (unsigned char)(prev_port & 0xFF);
 
     if (switch_addr != 0xFF) {
-
         // Check lasted access switch address on a master
         // Only select new channel of a switch if they are difference from last channel of a switch
         if ( prev_switch != switch_addr && prev_switch != 0 ) {
@@ -1585,7 +1667,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                 wr_data[0] = 0x00;
                 wr_data[1] = 0x00;
                 struct i2c_msg msgs[] = {
-                       { .addr = prev_switch, .flags = 0, .len = 2, .buf = wr_data },
+                    { .addr = prev_switch, .flags = 0, .len = 2, .buf = wr_data },
                 };
                 error = smbus_access(adapter, msgs, ARRAY_SIZE(msgs));
                 if(error >= 0){
@@ -1593,7 +1675,6 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                 }else{
                     dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
                 }
-
             }
             if(retry < 0)
                 goto release_unlock;
@@ -1603,7 +1684,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                 wr_data[0] = 0x00;
                 wr_data[1] = (1 << channel);
                 struct i2c_msg msgs[] = {
-                       { .addr = switch_addr, .flags = 0, .len = 2, .buf = wr_data },
+                    { .addr = switch_addr, .flags = 0, .len = 2, .buf = wr_data },
                 };
                 error = smbus_access(adapter, msgs, ARRAY_SIZE(msgs));
                 if(error >= 0){
@@ -1611,7 +1692,6 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                 }else{
                     dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", channel, switch_addr, error);
                 }
-
             }
             if(retry < 0){
                 goto release_unlock;
@@ -1684,12 +1764,12 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
             { .addr = switch_addr, .flags = I2C_M_RD, .len = 1, .buf = &read_channel },
        };
         error = smbus_access(adapter, msgs, ARRAY_SIZE(msgs));
-        dev_info(&adapter->dev,"fb2_fpga: Try access I2C switch device at %2.2x\n", switch_addr);
+        //dev_info(&adapter->dev,"fb2_fpga: Try access I2C switch device at %2.2x\n", switch_addr);
         if (error < 0) {
             dev_err(&adapter->dev,"fb2_fpga: Unbale to access switch device.\n");
         } else {
-               dev_dbg(&adapter->dev,"Read success, register val %2.2x\n", read_channel);
-           }
+            dev_dbg(&adapter->dev,"Read success, register val %2.2x\n", read_channel);
+        }
     }
 
     // If retry was used up(retry = 0) and the last transfer result is -EBUSY
@@ -1703,8 +1783,8 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
          */
         if( master_bus == I2C_MASTER_CH_11 || master_bus == I2C_MASTER_CH_12 ){
         //if( master_bus == I2C_MASTER_CH_11 || master_bus == I2C_MASTER_CH_11 + 1 ){
-            dev_info(&adapter->dev, "fb2_fpga: Trying bus recovery...\n");
-            dev_info(&adapter->dev, "fb2_fpga: Reset I2C switch device.\n");
+            dev_dbg(&adapter->dev, "fb2_fpga: Trying bus recovery...\n");
+            dev_dbg(&adapter->dev, "fb2_fpga: Reset I2C switch device.\n");
 
             // reset PCA9548 on the current BUS.
             if( master_bus == I2C_MASTER_CH_11){
@@ -1715,7 +1795,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                 pcie_reg32_read(0x0108, &reg_val);
                 reg_val |= 0x0F;
                 pcie_reg32_write(0x0108, reg_val);
-            } else if(master_bus == I2C_MASTER_CH_11 + 1){
+            } else if(master_bus == I2C_MASTER_CH_12){
                 pcie_reg32_read(0x0108, &reg_val);
                 reg_val &= 0x8F;
                 pcie_reg32_write(0x0108, reg_val);
@@ -1727,14 +1807,13 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
             // clear the last access port 
             fpga_i2c_lasted_access_port[master_bus - 1] = 0;
         } else {
-              dev_crit(&adapter->dev, "I2C bus unrecoverable.\n");
-           }
+            dev_crit(&adapter->dev, "I2C bus unrecoverable.\n");
+        }
     }
-
 
 release_unlock:    
     mutex_unlock(&fpga_i2c_master_locks[0]);
-    dev_info(&adapter->dev,"fb2_fpga: switch ch %d of 0x%x -> ch %d of 0x%x\n", prev_ch, prev_switch, channel, switch_addr);
+    dev_dbg(&adapter->dev,"fb2_fpga: switch ch %d of 0x%x -> ch %d of 0x%x\n", prev_ch, prev_switch, channel, switch_addr);
     return retval;
 }
 
@@ -2391,7 +2470,7 @@ int fishbone2_init(void)
     bool get_done = 0;
     uint32_t fpga_version = 0, reg_val;
 
-    printk(KERN_INFO "fb2_int_fpga_drv built at %s\n", "2020-2-13");
+    printk(KERN_INFO "fb2_int_fpga_drv built at %s\n", "2020-2-14");
 
     get_done = ali_ocore_done_status();
     if (!get_done) {
