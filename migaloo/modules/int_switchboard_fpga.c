@@ -244,6 +244,7 @@ PORT XCVR       0x00004000 - 0x00004FFF
 */
 #define I2C_XCVR_CTRL      0x11
 #define I2C_CTRL_RST       4
+#define I2C_CTRL_LPMOD     1
 #define I2C_CTRL_MODSEL    0
 #define I2C_CTRL_TXDIS     0
 
@@ -290,6 +291,12 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASK_TXFAULT     1
 #define I2C_MASK_INT_N       0
 #define I2C_MASK_RXLOS       0
+
+/* PORT CONTROL ENABLE REGISTER
+[31:6]  RSVD
+[7:0]   Port Control         0x4E(default value)
+*/
+#define I2C_XCVR_PORT_CTL    0x15
 
 
 /* I2C master clock speed */
@@ -798,8 +805,8 @@ static ssize_t cpld1_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld1_read_addr) },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld1_read_addr) },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -826,8 +833,8 @@ static ssize_t cpld1_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -848,7 +855,7 @@ static ssize_t cpld1_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -889,7 +896,7 @@ static ssize_t cpld1_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -915,8 +922,8 @@ static ssize_t cpld2_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld2_read_addr) },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld2_read_addr) },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -945,8 +952,8 @@ static ssize_t cpld2_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -968,7 +975,7 @@ static ssize_t cpld2_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1008,7 +1015,7 @@ static ssize_t cpld2_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1034,8 +1041,8 @@ static ssize_t cpld3_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld3_read_addr) },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld3_read_addr) },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1064,8 +1071,8 @@ static ssize_t cpld3_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1088,7 +1095,7 @@ static ssize_t cpld3_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1128,7 +1135,7 @@ static ssize_t cpld3_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1154,8 +1161,8 @@ static ssize_t cpld4_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld4_read_addr) },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld4_read_addr) },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1184,8 +1191,8 @@ static ssize_t cpld4_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1207,7 +1214,7 @@ static ssize_t cpld4_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1247,7 +1254,7 @@ static ssize_t cpld4_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCT_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1273,8 +1280,8 @@ static ssize_t cpld5_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld5_read_addr) },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld5_read_addr) },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1303,8 +1310,8 @@ static ssize_t cpld5_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1327,7 +1334,7 @@ static ssize_t cpld5_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1367,7 +1374,7 @@ static ssize_t cpld5_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1393,8 +1400,8 @@ static ssize_t cpld6_getreg_show(struct device *dev, struct device_attribute *at
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld6_read_addr) },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->cpld6_read_addr) },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1423,8 +1430,8 @@ static ssize_t cpld6_scratch_show(struct device *dev, struct device_attribute *a
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1446,7 +1453,7 @@ static ssize_t cpld6_scratch_store(struct device *dev, struct device_attribute *
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1486,7 +1493,7 @@ static ssize_t cpld6_setreg_store(struct device *dev, struct device_attribute *a
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[LCB_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1513,8 +1520,8 @@ static ssize_t fancpld_getreg_show(struct device *dev, struct device_attribute *
     // CPLD register is one byte
     uint8_t data;
     struct i2c_msg msgs[] = {
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->fancpld_read_addr) },
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &(fpga_data->fancpld_read_addr) },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
 
     fpga_i2c_access(fpga_data->i2c_adapter[FAN_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
@@ -1541,8 +1548,8 @@ static ssize_t fancpld_scratch_show(struct device *dev, struct device_attribute 
 
     reg = 0x01;//scratch reg address
     struct i2c_msg msgs[] = {
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[FAN_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1562,7 +1569,7 @@ static ssize_t fancpld_scratch_store(struct device *dev, struct device_attribute
     wr_data[0] = 0x01;//scratch reg address
     wr_data[1] = data;
     struct i2c_msg msgs[] = {
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[FAN_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1603,7 +1610,7 @@ static ssize_t fancpld_setreg_store(struct device *dev, struct device_attribute 
     wr_data[0] = addr;
     wr_data[1] = value;
     struct i2c_msg msgs[] = {
-       { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = FAN_CPLD_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[FAN_I2C_CPLD_INDEX], msgs, ARRAY_SIZE(msgs));
     if (err < 0)
@@ -1732,6 +1739,7 @@ static ssize_t qsfp_modsel_store(struct device *dev, struct device_attribute *at
         else
             data = data | ( 1U << I2C_CTRL_MODSEL );
         i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
+
         status = size;
     }
     return status;
@@ -1768,11 +1776,49 @@ static ssize_t qsfp_reset_store(struct device *dev, struct device_attribute *att
         else
             data = data | ((u8)0x1 << I2C_CTRL_RST);
         i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
+		
         status = size;
     }
     return status;
 }
 DEVICE_ATTR_RW(qsfp_reset);
+
+static ssize_t qsfp_lpmod_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    u8 data;
+    int err;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+    err = i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
+    if(err < 0){
+        return err;
+    }
+    return sprintf(buf, "%d\n", (data >> I2C_CTRL_LPMOD) & 1U);
+}
+
+static ssize_t qsfp_lpmod_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+    ssize_t status;
+    long value;
+    u8 data;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+
+    status = kstrtol(buf, 0, &value);
+    if (status == 0) {
+        // if value is 0, QSFP LPMOD pin is low
+        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
+        if (!value)
+            data = data & ~((u8)0x1 << I2C_CTRL_LPMOD);
+		else
+            data = data | ((u8)0x1 << I2C_CTRL_LPMOD);
+        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
+
+        status = size;
+    }
+    return status;
+}
+DEVICE_ATTR_RW(qsfp_lpmod);
 
 static ssize_t sfp_txdisable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -1797,13 +1843,13 @@ static ssize_t sfp_txdisable_store(struct device *dev, struct device_attribute *
     mutex_lock(&fpga_data->fpga_lock);
     status = kstrtol(buf, 0, &value);
     if (status == 0) {
-        // check if value is 0 clear
         i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
         if (!value)
             data = data & ~((u8)0x1 << I2C_CTRL_TXDIS);
         else
             data = data | ((u8)0x1 << I2C_CTRL_TXDIS);
         i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
+
         status = size;
     }
     mutex_unlock(&fpga_data->fpga_lock);
@@ -1811,15 +1857,55 @@ static ssize_t sfp_txdisable_store(struct device *dev, struct device_attribute *
 }
 DEVICE_ATTR_RW(sfp_txdisable);
 
+static ssize_t port_ctl_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    u8 data;
+    int err;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+    err = i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
+    if(err < 0){
+        return err;
+    }
+    return sprintf(buf, "0x%X\n", (data) & 0xFF);
+}
+static ssize_t port_ctl_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+    ssize_t status;
+    long value;
+    u8 data;
+    struct sff_device_data *dev_data = dev_get_drvdata(dev);
+    unsigned int portid = dev_data->portid;
+
+    mutex_lock(&fpga_data->fpga_lock);
+    status = kstrtol(buf, 0, &value);
+    if (status == 0) {
+		// port control enable register set bits[7:0]=0x59 enable
+        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
+        if (!value)
+            data = (data & 0xFF);
+        else
+            data = (value & 0xFF);
+        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_WRITE);
+		// port control enable register set bits[7:0]=0x4E disable
+        status = size;
+    }
+    mutex_unlock(&fpga_data->fpga_lock);
+    return status;
+}
+DEVICE_ATTR_RW(port_ctl);
+
 static struct attribute *sff_attrs[] = {
     &dev_attr_qsfp_modirq.attr,
     &dev_attr_qsfp_modprs.attr,
     &dev_attr_qsfp_modsel.attr,
     &dev_attr_qsfp_reset.attr,
+    &dev_attr_qsfp_lpmod.attr,
     &dev_attr_sfp_txfault.attr,
     &dev_attr_sfp_rxlos.attr,
     &dev_attr_sfp_modabs.attr,
     &dev_attr_sfp_txdisable.attr,
+    &dev_attr_port_ctl.attr,
     NULL,
 };
 
@@ -2099,7 +2185,6 @@ static void i2c_core_deinit(unsigned int master_bus,void __iomem *pci_bar){
  */
 static int i2c_xcvr_access(u8 register_address, unsigned int portid, u8 *data, char rw){
     u8 wr_data[2];
-    u16 dev_addr = 0;
     int err;
     int lci, cpldi, i2c_adapter_index;
     int row, col;
@@ -2116,7 +2201,7 @@ static int i2c_xcvr_access(u8 register_address, unsigned int portid, u8 *data, c
     wr_data[0] = I2C_XCVR_SEL;
     wr_data[1] = cpld_i2c_bus_dev[portid - 1].channel;
     struct i2c_msg msgs[] = {
-       { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = 0, .len = 2, .buf = wr_data },
     };
     err = fpga_i2c_access(fpga_data->i2c_adapter[cpld_i2c_bus_dev[portid - 1].master_bus], msgs, ARRAY_SIZE(msgs));
     if(err < 0){
@@ -2124,19 +2209,19 @@ static int i2c_xcvr_access(u8 register_address, unsigned int portid, u8 *data, c
     }
     // Read/write port xcvr register
     if (rw == I2C_SMBUS_READ) {
-       struct i2c_msg msgs[] = {
-         { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = 0, .len = 1, .buf = &register_address },
-         { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = I2C_M_RD, .len = 1, .buf = data },
-       };
-       err = fpga_i2c_access(fpga_data->i2c_adapter[cpld_i2c_bus_dev[portid - 1].master_bus], msgs, ARRAY_SIZE(msgs));
+    struct i2c_msg msgs[] = {
+        { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = 0, .len = 1, .buf = &register_address },
+        { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = I2C_M_RD, .len = 1, .buf = data },
+    };
+    err = fpga_i2c_access(fpga_data->i2c_adapter[cpld_i2c_bus_dev[portid - 1].master_bus], msgs, ARRAY_SIZE(msgs));
     } else if (rw == I2C_SMBUS_WRITE) {
-            wr_data[0] = register_address;
-            wr_data[1] = *data;
-            struct i2c_msg msgs[] = {
-                   { .addr = dev_addr, .flags = 0, .len = 2, .buf = wr_data },
-            };
-            err = fpga_i2c_access(fpga_data->i2c_adapter[cpld_i2c_bus_dev[portid - 1].master_bus], msgs, ARRAY_SIZE(msgs));
-       }
+        wr_data[0] = register_address;
+        wr_data[1] = *data;
+        struct i2c_msg msgs[] = {
+            { .addr = cpld_i2c_bus_dev[portid - 1].switch_addr, .flags = 0, .len = 2, .buf = wr_data },
+        };
+        err = fpga_i2c_access(fpga_data->i2c_adapter[cpld_i2c_bus_dev[portid - 1].master_bus], msgs, ARRAY_SIZE(msgs));
+    }
     if(err < 0){
         goto exit_unlock;
     }
@@ -2401,15 +2486,15 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
          printk(KERN_INFO "th4_fpga:get master_adapter failed!\n");
          return -ESHUTDOWN;
     }
+
     adapter = master_adapter;
 
-	mutex_lock(&fpga_i2c_master_locks[master_bus - 1]);
-	prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
-	prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
-	prev_ch = (unsigned char)(prev_port & 0xFF);
+    mutex_lock(&fpga_i2c_master_locks[master_bus - 1]);
+    prev_port = fpga_i2c_lasted_access_port[master_bus - 1];
+    prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
+    prev_ch = (unsigned char)(prev_port & 0xFF);
 
     if (switch_addr != 0xFF) {
-
         // Check lasted access switch address on a master
         // Only select new channel of a switch if they are difference from last channel of a switch
         if ( prev_switch != switch_addr && prev_switch != 0 ) {
@@ -2469,9 +2554,8 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
                     if(error >= 0){
                         break;
                     }else{
-                    dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
+                        dev_dbg(&adapter->dev,"Failed to select ch %d of 0x%x, CODE %d\n", prev_ch, prev_switch, error);
                     }
-
                 }
                 if(retry < 0){
                     goto release_unlock;
@@ -2520,7 +2604,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
             { .addr = switch_addr, .flags = I2C_M_RD, .len = 1, .buf = &read_channel },
        };
         error = smbus_access(adapter, msgs, ARRAY_SIZE(msgs));
-        dev_info(&adapter->dev,"th4_fpga: Try access I2C switch device at %2.2x\n", switch_addr);
+        //dev_info(&adapter->dev,"th4_fpga: Try access I2C switch device at %2.2x\n", switch_addr);
         if(error < 0){
             dev_err(&adapter->dev,"th4_fpga: Unbale to access switch device.\n");
         }else{
@@ -2538,41 +2622,56 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
          * th4: Device specific I2C reset topology
          */
         if( master_bus == I2C_MASTER_CH_11 || master_bus == I2C_MASTER_CH_12 || 
-            master_bus == I2C_MASTER_CH_13 || master_bus == I2C_MASTER_CH_14 ){
-            dev_info(&adapter->dev, "th4_fpga: Trying bus recovery...\n");
-            dev_info(&adapter->dev, "th4_fpga: Reset I2C switch device.\n");
+            master_bus == I2C_MASTER_CH_13 || master_bus == I2C_MASTER_CH_14 || 
+	    	master_bus == I2C_MASTER_CH_15 || master_bus == I2C_MASTER_CH_10 ){
+            dev_dbg(&adapter->dev, "th4_fpga: Trying bus recovery...\n");
+            dev_dbg(&adapter->dev, "th4_fpga: Reset I2C switch device.\n");
             
             // reset PCA9548 on the current BUS.
             if(master_bus == I2C_MASTER_CH_11){
                 // LC1_I2C3_RST_N .. LC1_I2C0_RST_N
                 pcie_reg32_read(0x0108, &reg_val);
-                pcie_reg32_write(0x0108, reg_val & 0xF0);
+                pcie_reg32_write(0x0108, reg_val & 0x00);
                 udelay(1);
                 pcie_reg32_read(0x0108, &reg_val);
-                pcie_reg32_write(0x0108, reg_val | 0x0F);
+                pcie_reg32_write(0x0108, reg_val | 0xFF);
             }else if(master_bus == I2C_MASTER_CH_12){
                 // LC1_I2C7_RST_N .. LC1_I2C4_RST_N
-                pcie_reg32_read(0x0108, &reg_val);
-                pcie_reg32_write(0x0108, reg_val & 0x0F);
+                pcie_reg32_read(0x010c, &reg_val);
+                pcie_reg32_write(0x010c, reg_val & 0x00);
                 udelay(1);
-                pcie_reg32_read(0x0108, &reg_val);
-                pcie_reg32_write(0x0108, reg_val | 0xF0);
+                pcie_reg32_read(0x010c, &reg_val);
+                pcie_reg32_write(0x010c, reg_val | 0xFF);
             }else if(master_bus == I2C_MASTER_CH_13){
                 // LC2_I2C3_RST_N .. LC2_I2C0_RST_N
                 pcie_reg32_read(0x010c, &reg_val);
-                pcie_reg32_write(0x010c, reg_val & 0xF0);
+                pcie_reg32_write(0x010c, reg_val & 0x00);
                 udelay(1);
                 pcie_reg32_read(0x010c, &reg_val);
-                pcie_reg32_write(0x010c, reg_val | 0x0F);
+                pcie_reg32_write(0x010c, reg_val | 0xFF);
             }else if(master_bus == I2C_MASTER_CH_14){
                 // LC2_I2C7_RST_N .. LC2_I2C4_RST_N
-                pcie_reg32_read(0x010c, &reg_val);
-                pcie_reg32_write(0x010c, reg_val & 0x0F);
+                pcie_reg32_read(0x0110, &reg_val);
+                pcie_reg32_write(0x0110, reg_val & 0x00);
                 udelay(1);
-                pcie_reg32_read(0x010c, &reg_val);
-                pcie_reg32_write(0x010c, reg_val | 0xF0);
+                pcie_reg32_read(0x0110, &reg_val);
+                pcie_reg32_write(0x0110, reg_val | 0xFF);
+            }else if(master_bus == I2C_MASTER_CH_15){
+                // LC2_I2C7_RST_N .. LC2_I2C4_RST_N
+                pcie_reg32_read(0x0110, &reg_val);
+                pcie_reg32_write(0x0110, reg_val & 0x00);
+                udelay(1);
+                pcie_reg32_read(0x0110, &reg_val);
+                pcie_reg32_write(0x0110, reg_val | 0xFF);
+            }else if(master_bus == I2C_MASTER_CH_10){
+                // LC2_I2C7_RST_N .. LC2_I2C4_RST_N
+                pcie_reg32_read(0x0108, &reg_val);
+                pcie_reg32_write(0x0108, reg_val & 0x00);
+                udelay(1);
+                pcie_reg32_read(0x0108, &reg_val);
+                pcie_reg32_write(0x0108, reg_val | 0xFF);
             }
-            // clear the last access port 
+	    // clear the last access port 
             fpga_i2c_lasted_access_port[master_bus - 1] = 0;
         }else{
             dev_crit(&adapter->dev, "I2C bus unrecoverable.\n");
@@ -3492,7 +3591,7 @@ int th4_init(void)
     bool get_done = 0;
     uint32_t fpga_version = 0, reg_val;
 
-    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-2-13");
+    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-2-14");
 
     get_done = ali_ocore_done_status();
     if (!get_done) {
