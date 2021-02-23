@@ -1,14 +1,8 @@
-sonic-cel-platform-modules (1.0) unstable; urgency=low
-
-  * Add Silverstone platform.
-
- -- Pradchaya Phucharoen <pphuchar@celestica.com>  Mon, 06 Aug 2018 12:18:15 +0700
-
 sonic-cel-platform-modules (0.9) unstable; urgency=low
 
-  * Add Questone2 platform.
+  * Add haliburton platform module.
 
- -- Wirut Getbamrung <wgetbumr@celestica.com>  Tue, 31 Jul 2018 10:40:00 +0700
+ -- Wirut Getbamrung <wgetbumr@celestica.com>  Fri, 17 Aug 2018 10:10:10 +0700
 
 sonic-cel-platform-modules (0.8) unstable; urgency=low
 

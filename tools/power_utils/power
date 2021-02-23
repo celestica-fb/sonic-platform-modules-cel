@@ -1,0 +1,117 @@
+#!/bin/bash
+#
+# Copyright 2019-present Celestica. All Rights Reserved.
+#
+# This program file is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+#
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+
+prog="$0"
+command="$1"
+component="$2"
+
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+fi
+
+usage() {
+    echo "Usage: power [option] <command>"
+    echo
+    echo "Options:"
+    echo "  -h, --help          : to print this message."
+    echo "  -f, --force         : do not prompt before overwriting."
+    echo
+    echo "Commands:"
+    echo
+    echo "  cycle cpu:  To power cycle the CPU"
+    echo
+    echo "  cycle system : To reboot the whole system"
+    echo
+}
+
+function confirm() {
+    while true; do
+        read -r -n 1 -p "$* [y/n]: " yn
+        case $yn in
+        [yY])
+            echo
+            return 0
+            ;;
+        [nN])
+            echo
+            return 1
+            ;;
+        *) echo ;;
+        esac
+    done
+}
+
+cpu_cycle() {
+    echo "Power cycling CPU..."
+    curl -m 60 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on"}' http://240.1.1.1:8080/api/hw/rawcmd
+    ret=$?
+    if [ $ret -ne 0 ]; then
+        echo "Failed to power cycle the CPU"
+    fi
+    return 0
+}
+
+system_cycle() {
+    echo "Power cycling system..."
+    curl -m 60 -d '{"Command":"/usr/local/bin/wedge_power.sh off;/usr/local/bin/wedge_power.sh on;reboot"}' http://240.1.1.1:8080/api/hw/rawcmd
+    ret=$?
+    if [ $ret -ne 0 ]; then
+        echo "Failed to power cycle the system"
+    fi
+    return 0
+}
+
+if [ $# -lt 1 ]; then
+    usage
+    exit -1
+fi
+
+run_cmd() {
+    case "$component" in
+    cpu)
+        cpu_cycle
+        ;;
+    system)
+        system_cycle
+        ;;
+    *)
+        usage
+        exit -1
+        ;;
+    esac
+}
+
+case "$command" in
+-h | --help)
+    usage
+    ;;
+-f | --force)
+    component="$3"
+    run_cmd
+    ;;
+cycle)
+    confirm "Do you need to power cycle?" || exit 1
+    run_cmd
+    ;;
+*)
+    usage
+    exit -1
+    ;;
+esac
+
+exit $?

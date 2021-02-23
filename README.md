@@ -1,1 +1,1 @@
-Platform drivers of Celestica products for the SONiC project (Deprecated)
+platform drivers for Celestica DX010 and Haliburton for the SONiC project
