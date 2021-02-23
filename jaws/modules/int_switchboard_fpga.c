@@ -245,7 +245,6 @@ PORT XCVR       0x00004000 - 0x00004FFF
 */
 #define I2C_XCVR_CTRL      0x11
 #define I2C_CTRL_RST       4
-#define I2C_CTRL_LPMOD     1
 #define I2C_CTRL_MODSEL    0
 #define I2C_CTRL_TXDIS     0
 
@@ -292,12 +291,6 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASK_TXFAULT     1
 #define I2C_MASK_INT_N       0
 #define I2C_MASK_RXLOS       0
-
-/* PORT CONTROL ENABLE REGISTER
-[31:6]  RSVD
-[7:0]   Port Control         0x4E(default value)
-*/
-#define I2C_XCVR_PORT_CTL        0x15
 
 /* I2C master clock speed */
 // NOTE: Only I2C clock in normal mode is support here.
@@ -1478,43 +1471,6 @@ static ssize_t qsfp_reset_store(struct device *dev, struct device_attribute *att
 }
 DEVICE_ATTR_RW(qsfp_reset);
 
-static ssize_t qsfp_lpmod_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    u8 data;
-    int err;
-    struct sff_device_data *dev_data = dev_get_drvdata(dev);
-    unsigned int portid = dev_data->portid;
-    err = i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
-    if(err < 0){
-        return err;
-    }
-    return sprintf(buf, "%d\n", (data >> I2C_CTRL_LPMOD) & 1U);
-}
-
-static ssize_t qsfp_lpmod_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
-{
-    ssize_t status;
-    long value;
-    u8 data;
-    struct sff_device_data *dev_data = dev_get_drvdata(dev);
-    unsigned int portid = dev_data->portid;
-
-    status = kstrtol(buf, 0, &value);
-    if (status == 0) {
-        // if value is 0, QSFP LPMOD pin is low
-        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_READ);
-        if (!value)
-            data = data & ~((u8)0x1 << I2C_CTRL_LPMOD);
-		else
-            data = data | ((u8)0x1 << I2C_CTRL_LPMOD);
-        i2c_xcvr_access(I2C_XCVR_CTRL,portid,&data,I2C_SMBUS_WRITE);
-
-        status = size;
-    }
-    return status;
-}
-DEVICE_ATTR_RW(qsfp_lpmod);
-
 static ssize_t sfp_txdisable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
     u8 data;
@@ -1552,55 +1508,15 @@ static ssize_t sfp_txdisable_store(struct device *dev, struct device_attribute *
 }
 DEVICE_ATTR_RW(sfp_txdisable);
 
-static ssize_t port_ctl_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    u8 data;
-    int err;
-    struct sff_device_data *dev_data = dev_get_drvdata(dev);
-    unsigned int portid = dev_data->portid;
-    err = i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
-    if(err < 0){
-        return err;
-    }
-    return sprintf(buf, "0x%X\n", (data) & 0xFF);
-}
-static ssize_t port_ctl_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
-{
-    ssize_t status;
-    long value;
-    u8 data;
-    struct sff_device_data *dev_data = dev_get_drvdata(dev);
-    unsigned int portid = dev_data->portid;
-
-    mutex_lock(&fpga_data->fpga_lock);
-    status = kstrtol(buf, 0, &value);
-    if (status == 0) {
-		// port control enable register set bits[7:0]=0x59 enable
-        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_READ);
-        if (!value)
-            data = (data & 0xFF);
-        else
-            data = (value & 0xFF);
-        i2c_xcvr_access(I2C_XCVR_PORT_CTL,portid,&data,I2C_SMBUS_WRITE);
-		// port control enable register set bits[7:0]=0x4E disable
-        status = size;
-    }
-    mutex_unlock(&fpga_data->fpga_lock);
-    return status;
-}
-DEVICE_ATTR_RW(port_ctl);
-
 static struct attribute *sff_attrs[] = {
     &dev_attr_qsfp_modirq.attr,
     &dev_attr_qsfp_modprs.attr,
     &dev_attr_qsfp_modsel.attr,
     &dev_attr_qsfp_reset.attr,
-    &dev_attr_qsfp_lpmod.attr,
     &dev_attr_sfp_txfault.attr,
     &dev_attr_sfp_rxlos.attr,
     &dev_attr_sfp_modabs.attr,
     &dev_attr_sfp_txdisable.attr,
-    &dev_attr_port_ctl.attr,
     NULL,
 };
 
@@ -1620,7 +1536,7 @@ static ssize_t port_led_mode_show(struct device *dev, struct device_attribute *a
     __u8 led_mode_1, led_mode_2, led_mode_3, led_mode_4, reg;
     int err;
 	
-	reg = 0x09;//led_mode reg address
+    reg = 0x09;//led_mode reg address
     struct i2c_msg msgs1[] = {
        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 1, .buf = &reg },
        { .addr = CPLD1_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &led_mode_1 },
@@ -1638,13 +1554,13 @@ static ssize_t port_led_mode_show(struct device *dev, struct device_attribute *a
        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &led_mode_4 },
     };
 	
-	err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
+    err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
     if (err < 0)
         return err;
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs2, ARRAY_SIZE(msgs2));
     if (err < 0)
         return err;
-	err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
+    err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
     if (err < 0)
         return err;
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs4, ARRAY_SIZE(msgs4));
@@ -1673,20 +1589,20 @@ static ssize_t port_led_mode_store(struct device *dev, struct device_attribute *
 	wr_data[0] = 0x09;//led_mode reg address
     wr_data[1] = led_mode_1;
 	struct i2c_msg msgs1[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     struct i2c_msg msgs2[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
 	struct i2c_msg msgs3[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     struct i2c_msg msgs4[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     status = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
     status = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs2, ARRAY_SIZE(msgs2));
-	status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
+    status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
     status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs4, ARRAY_SIZE(msgs4));
 	
     return size;
@@ -1718,13 +1634,13 @@ static ssize_t port_led_color_show(struct device *dev, struct device_attribute *
        { .addr = CPLD2_SLAVE_ADDR, .flags = I2C_M_RD, .len = 1, .buf = &led_color4 },
     };
 	
-	err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
+    err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
     if (err < 0)
         return err;
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs2, ARRAY_SIZE(msgs2));
     if (err < 0)
         return err;
-	err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
+    err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
     if (err < 0)
         return err;
     err = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs4, ARRAY_SIZE(msgs4));
@@ -1764,20 +1680,20 @@ static ssize_t port_led_color_store(struct device *dev, struct device_attribute 
 	wr_data[0] = 0x0A;//led_set reg address
     wr_data[1] = led_color;
 	struct i2c_msg msgs1[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     struct i2c_msg msgs2[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
 	struct i2c_msg msgs3[] = {
-       { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD1_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
     struct i2c_msg msgs4[] = {
-       { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
+        { .addr = CPLD2_SLAVE_ADDR, .flags = 0, .len = 2, .buf = wr_data },
     };
-	status = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
+    status = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs1, ARRAY_SIZE(msgs1));
     status = fpga_i2c_access(fpga_data->i2c_adapter[SW1_I2C_CPLD_INDEX], msgs2, ARRAY_SIZE(msgs2));
-	status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
+    status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs3, ARRAY_SIZE(msgs3));
     status = fpga_i2c_access(fpga_data->i2c_adapter[SW2_I2C_CPLD_INDEX], msgs4, ARRAY_SIZE(msgs4));
 
     return size;
