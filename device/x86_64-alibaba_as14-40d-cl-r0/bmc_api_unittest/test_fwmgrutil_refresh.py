@@ -99,7 +99,7 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     def test_firmware_refresh_bios(self):
         #ret = self.platform_fwmgrutil.firmware_program("bios", unittest_config.BIOS_IMAGE_PATH, "both")
         #self.assertEqual(ret, True)
-        ret = self.platform_fwmgrutil.firmware_refresh(["BIOS"], None, None)
+        ret = self.platform_fwmgrutil.firmware_refresh(["bios"], None, None)
         self.assertEqual(ret, True)
        
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
