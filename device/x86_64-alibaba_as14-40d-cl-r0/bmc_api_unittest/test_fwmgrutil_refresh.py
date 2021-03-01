@@ -112,7 +112,6 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_base_cpld(self):
         # refresh base cpld in test_firmware_refresh_cpld, so skip this function #
-        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         cpld_flag = ""
@@ -138,7 +137,6 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_cpu_cpld(self):
         # refresh cpu cpld in test_firmware_refresh_cpld, so skip this function #
-        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         cpld_flag = ""
@@ -166,7 +164,6 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_fan_cpld(self):
         # refresh fan cpld in test_firmware_refresh_cpld, so skip this function #
-        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         if "CPU_BOARD_CPLD-FAN" in cpld_list[hwsku]["program"]:
@@ -191,7 +188,6 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_cpld1(self):
         # refresh cpld1 cpld in test_firmware_refresh_cpld, so skip this function #
-        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         cpld_flag = ""
@@ -223,7 +219,6 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_cpld2(self):
         # refresh cpld2 cpld in test_firmware_refresh_cpld, so skip this function #
-        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         cpld_flag = ""

@@ -659,7 +659,7 @@ class FwMgrUtil():
                     "CPU_CPLD": "cpu",
                     "BASE_CPLD": "base",
                     "COMBO_CPLD": "combo",
-                    "SW_CPLD": "switch",
+                    "SW_CPLD1": "switch",
                 }.get(fw_extra_str, None)
 
                 # +++ add by maxwill for cpld upgrade index +++ #
