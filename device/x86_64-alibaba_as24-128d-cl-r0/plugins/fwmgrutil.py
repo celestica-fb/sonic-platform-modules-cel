@@ -64,6 +64,14 @@ class FwMgrUtil():
                 "path": "/sys/devices/platform/%s.switchboard/CPLD4/getreg" % self.platform_name,
                 "offset": "0x00"
             },
+            "CPLD_5": {
+                "path": "/sys/devices/platform/%s.switchboard/CPLD5/getreg" % self.platform_name,
+                "offset": "0x00"
+            },
+            "CPLD_6": {
+                "path": "/sys/devices/platform/%s.switchboard/CPLD6/getreg" % self.platform_name,
+                "offset": "0x00"
+            },
             "CPLD_FAN": {
                 "path": "bmc",
                 "offset": "0x00"
@@ -659,7 +667,7 @@ class FwMgrUtil():
                     "CPU_CPLD": "cpu",
                     "BASE_CPLD": "base",
                     "COMBO_CPLD": "combo",
-                    "SW_CPLD": "switch",
+                    "SW_CPLD1": "switch",
                 }.get(fw_extra_str, None)
 
                 # +++ add by maxwill for cpld upgrade index +++ #
