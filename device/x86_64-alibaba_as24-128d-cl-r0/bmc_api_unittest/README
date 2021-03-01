@@ -16,7 +16,10 @@ BMC api auto test framework
         BOT_LC_CPLD = '/home/admin/img/as*_cpld_6_cpu_pwr.vme'
         FAN_CPLD_REFRESH = '/home/admin/img/as*_cpld_1_transfr_bmc.vme'
         BASE_CPLD_REFRESH = '/home/admin/img/as*_cpld_2_transfr_bmc.vme'
-
+        BASE_CPU_REFRESH = '/home/admin/img/as*_cpld_3_transfr_bmc.vme'
+        SW_CPLD1_REFRESH = '/home/admin/img/as*_cpld_4_transfr_bmc.vme'
+        TOP_LC_CPLD_REFRESH = '/home/admin/img/as*_cpld_5_transfr_bmc.vme'
+        BOT_LC_CPLD_REFRESH = '/home/admin/img/as*_cpld_6_transfr_bmc.vme'
 
 3.run command : cd /usr/share/sonic/device/x86_64-alibaba_as*-cl-r0/bmc_api_unittest
 4.run the test command:
