@@ -68,7 +68,7 @@ CPLDTEST_CLS = {
     "as14-40d" : { "program": { "FAN_CPLD": "as14-40d_cpld_1_cpu_pwr.vme",
                                 "BASE_CPLD": "as14-40d_cpld_2_cpu_pwr.vme",
                                 "CPU_CPLD": "as14-40d_cpld_3_cpu_pwr.vme",
-                                "SW_CPLD": "as14-40d_cpld_4_cpu_pwr.vme",
+                                "SW_CPLD1": "as14-40d_cpld_4_cpu_pwr.vme",
                               },
 
                     "refresh": {"FAN_CPLD": "as14-40d_cpld_1_transfr_bmc.vme",

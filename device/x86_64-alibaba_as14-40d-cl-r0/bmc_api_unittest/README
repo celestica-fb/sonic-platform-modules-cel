@@ -11,7 +11,7 @@ BMC api auto test framework
         FAN_CPLD = '/home/admin/img/as*_cpld_1_cpu_pwr.vme'
         BASE_CPLD = '/home/admin/img/as*_cpld_2_cpu_pwr.vme'
         CPU_CPLD = '/home/admin/img/as*_cpld_3_cpu_pwr.vme'
-        SW_CPLD = '/home/admin/img/as*_cpld_4_cpu_pwr.vme'
+        SW_CPLD1 = '/home/admin/img/as*_cpld_4_cpu_pwr.vme'
         FAN_CPLD_REFRESH = '/home/admin/img/as*_cpld_1_transfr_bmc.vme'
         BASE_CPLD_REFRESH = '/home/admin/img/as*_cpld_2_transfr_bmc.vme'
 
