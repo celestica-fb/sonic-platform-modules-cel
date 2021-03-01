@@ -219,6 +219,7 @@ class TestFirmwareRefreshUtil(unittest.TestCase):
     @unittest.skipIf(unittest_config.SKIP_REBOOT_CPU == True, "This case will cause CPU reboot")
     def test_firmware_refresh_cpld2(self):
         # refresh cpld2 cpld in test_firmware_refresh_cpld, so skip this function #
+        return True
         cpld_list = self.__get_cpld_config()
         hwsku = self.hwsku.lower()
         cpld_flag = ""
