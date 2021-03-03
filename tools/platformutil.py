@@ -623,7 +623,7 @@ def status(ctx):
                     fault = True
 
                 status = 'NOT_OK'
-                if fault == False and sval > slow and sval < shigh:
+                if fault == False and sval >= slow and sval <= shigh:
                     status = 'OK'
                 
                 status_table.append([sensor_name, si_name, status, (str(sval)+sunit), (str(slow)+sunit), (str(shigh)+sunit)])
