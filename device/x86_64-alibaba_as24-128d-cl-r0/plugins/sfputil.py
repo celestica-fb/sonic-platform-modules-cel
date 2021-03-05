@@ -8,6 +8,7 @@ try:
     import time
     import json
     import os
+    import re
     from sonic_sfp.sfputilbase import SfpUtilBase
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -15,7 +16,9 @@ except ImportError as e:
 
 class SfpUtil(SfpUtilBase):
     """Platform-specific SfpUtil class"""
-
+    stand_json_path = "/home/admin/stand_sfp.json"
+    
+    stand_sfp_table = []
     PORT_START = 1
     PORT_END = 128
     QSFP_PORT_START = 1
@@ -457,6 +460,16 @@ class SfpUtil(SfpUtilBase):
             return 1
         else:
             return 0
+
+
+    def _get_qsfp_driver_type(self, dev_class_fd):
+        try:
+            dev_class_fd.seek(0)
+            driver_type = dev_class_fd.read(1)
+        except IOError:
+            print("Error: reading dev_class sysfs file")
+            return None
+        return driver_type
 
     #check if we need to change driver type
     def _update_qsfp_driver(self, eeprom_fd, dev_class_fd):
