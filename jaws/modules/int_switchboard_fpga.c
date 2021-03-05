@@ -2608,8 +2608,9 @@ enum {
 };
 
 struct fpga_reg_data {
-    uint32_t addr;
-    uint32_t value;
+    uint32_t phy;//FPGA phy address
+    uint32_t addr;//FPGA register address
+    uint32_t value;//FPGA register value
 };
 
 static long fpgafw_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
