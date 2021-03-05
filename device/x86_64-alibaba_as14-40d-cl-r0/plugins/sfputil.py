@@ -4,8 +4,10 @@
 #
 
 try:
+    import pdb
     import time
     import json
+    import os
     from sonic_sfp.sfputilbase import SfpUtilBase
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -410,3 +412,90 @@ class SfpUtil(SfpUtilBase):
              return "invalide stand_sfp.json file, please check it!"
 
 # --- add for optical module eeprom content validation --- #
+    # Read eeprom
+    def _get_port_path(self, port_num, devid):
+        sysfs_i2c_adapter_base_path = "/sys/class/i2c-adapter"
+        i2c_adapter_id = self._get_port_i2c_adapter_id(port_num)
+        if i2c_adapter_id is None:
+            print("Error getting i2c bus num")
+            return None
+
+        # Get i2c virtual bus path for the sfp
+        sysfs_sfp_i2c_adapter_path = "%s/i2c-%s" % (sysfs_i2c_adapter_base_path,
+                                                        str(i2c_adapter_id))
+
+        # If i2c bus for port does not exist
+        if not os.path.exists(sysfs_sfp_i2c_adapter_path):
+            print("Could not find i2c bus %s. Driver not loaded?" % sysfs_sfp_i2c_adapter_path)
+            return None
+
+        sysfs_sfp_i2c_client_path = "%s/%s-00%s" % (sysfs_sfp_i2c_adapter_path,
+                                                    str(i2c_adapter_id),
+                                                    hex(devid)[-2:])
+
+        # If sfp device is not present on bus, Add it
+        if not os.path.exists(sysfs_sfp_i2c_client_path):
+            ret = self._add_new_sfp_device(
+                    sysfs_sfp_i2c_adapter_path, devid)
+            if ret != 0:
+                print("Error adding sfp device")
+                return None
+
+        return sysfs_sfp_i2c_client_path
+
+    def _get_port_dev_class_path(self, port_num, devid):
+        sysfs_sfp_i2c_client_path = self._get_port_path(port_num, devid)
+        sysfs_sfp_i2c_client_dev_class_path = "%s/dev_class" % sysfs_sfp_i2c_client_path
+        return sysfs_sfp_i2c_client_dev_class_path
+
+    def _set_qsfp_driver_type(self, dev_class_fd, driver_type):
+        try:
+            dev_class_fd.seek(0)
+            dev_class_fd.write(str(driver_type))
+        except IOError:
+            print("Error: writing dev_class sysfs file")
+            return 1
+        else:
+            return 0
+
+    #check if we need to change driver type
+    def _update_qsfp_driver(self, eeprom_fd, dev_class_fd):
+        raw = self._read_eeprom_specific_bytes(eeprom_fd, 0, 1)
+        # Process QSFP56-CMIS
+        update_type = '1'
+        if raw and raw[0] == '1e':
+            update_type = '3'
+
+        cur_type = self._get_qsfp_driver_type(dev_class_fd)
+        if cur_type != update_type:
+            self._set_qsfp_driver_type(dev_class_fd, update_type)
+    
+    def _read_eeprom_devid(self, port_num, devid, offset, num_bytes = 256, adaptive = True):
+        sysfs_sfp_i2c_client_eeprom_path = self._get_port_eeprom_path(port_num, devid)
+        if not self._sfp_eeprom_present(sysfs_sfp_i2c_client_eeprom_path, offset):
+            return None
+
+        try:
+            sysfsfile_eeprom = open(sysfs_sfp_i2c_client_eeprom_path, mode="rb", buffering=0)
+        except IOError:
+            print("Error: reading sysfs file %s" % sysfs_sfp_i2c_client_eeprom_path)
+            return None
+        if adaptive:
+            sysfs_sfp_i2c_client_dev_class_path = self._get_port_dev_class_path(port_num, devid)
+            try:
+                sysfsfile_dev_class = open(sysfs_sfp_i2c_client_dev_class_path, mode="r+", buffering=1)
+            except IOError:
+                print("Error: reading sysfs file %s" % sysfs_sfp_i2c_client_eeprom_path)
+                return None
+
+            self._update_qsfp_driver(sysfsfile_eeprom, sysfsfile_dev_class)
+
+        eeprom_raw = self._read_eeprom_specific_bytes(sysfsfile_eeprom, offset, num_bytes)
+
+        try:
+            sysfsfile_eeprom.close()
+            sysfsfile_dev_class.close()
+        except:
+            return None
+
+        return eeprom_raw
