@@ -61,9 +61,6 @@ static int  majorNumber;
 
 #define MASTER_ADAPTER_OFFSET  (1)
 
-extern struct i2c_adapter ** ali_ocore_bus_array(void);
-extern bool ali_ocore_done_status(void);
-
 extern int pcie_reg32_read(uint32_t offset, uint32_t *data);
 extern int pcie_reg32_write(uint32_t offset, uint32_t data);
 static wait_queue_head_t fpga_irq_wq;
@@ -150,6 +147,8 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASTER_CH_TOTAL I2C_MASTER_CH_15
 
 #define ALI_OCORE_TOTAL    (15)
+
+struct i2c_adapter *ali_ocore_i2c_bus[ALI_OCORE_TOTAL];
 
 /* SPI_MASTER */
 #define SPI_MASTER_WR_EN            0x1200 /* one bit */
@@ -431,11 +430,11 @@ static struct i2c_switch fpga_i2c_bus_dev[] = {
     {I2C_MASTER_CH_14, 0x71, 3, QSFP, "QSFP39"},  {I2C_MASTER_CH_14, 0x71, 5, QSFP, "QSFP40"},
     {I2C_MASTER_CH_12, 0x71, 4, QSFP, "QSFP41"},  {I2C_MASTER_CH_12, 0x71, 6, QSFP, "QSFP42"},
     {I2C_MASTER_CH_11, 0x71, 6, QSFP, "QSFP43"},  {I2C_MASTER_CH_11, 0x72, 0, QSFP, "QSFP44"},
-    {I2C_MASTER_CH_14, 0x71, 6, QSFP, "QSFP45"},  {I2C_MASTER_CH_14, 0x72, 0, QSFP, "QSFP46"},
+    {I2C_MASTER_CH_14, 0x71, 7, QSFP, "QSFP45"},  {I2C_MASTER_CH_14, 0x72, 1, QSFP, "QSFP46"},
     {I2C_MASTER_CH_12, 0x71, 5, QSFP, "QSFP47"},  {I2C_MASTER_CH_12, 0x71, 7, QSFP, "QSFP48"},
 
     {I2C_MASTER_CH_11, 0x71, 7, QSFP, "QSFP49"},  {I2C_MASTER_CH_11, 0x72, 1, QSFP, "QSFP50"},
-    {I2C_MASTER_CH_14, 0x71, 7, QSFP, "QSFP51"},  {I2C_MASTER_CH_14, 0x72, 1, QSFP, "QSFP52"},
+    {I2C_MASTER_CH_14, 0x71, 6, QSFP, "QSFP51"},  {I2C_MASTER_CH_14, 0x72, 0, QSFP, "QSFP52"},
     {I2C_MASTER_CH_12, 0x72, 0, QSFP, "QSFP53"},  {I2C_MASTER_CH_12, 0x72, 2, QSFP, "QSFP54"},
     {I2C_MASTER_CH_11, 0x72, 2, QSFP, "QSFP55"},  {I2C_MASTER_CH_11, 0x72, 4, QSFP, "QSFP56"},
     {I2C_MASTER_CH_14, 0x72, 2, QSFP, "QSFP57"},  {I2C_MASTER_CH_14, 0x72, 4, QSFP, "QSFP58"},
@@ -452,10 +451,10 @@ static struct i2c_switch fpga_i2c_bus_dev[] = {
     {I2C_MASTER_CH_13, 0x70, 0, QSFP, "QSFP77"},  {I2C_MASTER_CH_13, 0x70, 2, QSFP, "QSFP78"},
     {I2C_MASTER_CH_10, 0x70, 4, QSFP, "QSFP79"},  {I2C_MASTER_CH_10, 0x70, 6, QSFP, "QSFP80"},
 
-    {I2C_MASTER_CH_15, 0x70, 4, QSFP, "QSFP81"},  {I2C_MASTER_CH_15, 0x70, 6, QSFP, "QSFP82"},
+    {I2C_MASTER_CH_15, 0x70, 5, QSFP, "QSFP81"},  {I2C_MASTER_CH_15, 0x70, 7, QSFP, "QSFP82"},
     {I2C_MASTER_CH_13, 0x70, 1, QSFP, "QSFP83"},  {I2C_MASTER_CH_13, 0x70, 3, QSFP, "QSFP84"},
     {I2C_MASTER_CH_10, 0x70, 5, QSFP, "QSFP85"},  {I2C_MASTER_CH_10, 0x70, 7, QSFP, "QSFP86"},
-    {I2C_MASTER_CH_15, 0x70, 5, QSFP, "QSFP87"},  {I2C_MASTER_CH_15, 0x70, 7, QSFP, "QSFP88"},
+    {I2C_MASTER_CH_15, 0x70, 4, QSFP, "QSFP87"},  {I2C_MASTER_CH_15, 0x70, 6, QSFP, "QSFP88"},
     {I2C_MASTER_CH_13, 0x70, 4, QSFP, "QSFP89"},  {I2C_MASTER_CH_13, 0x70, 6, QSFP, "QSFP90"},
     {I2C_MASTER_CH_10, 0x71, 0, QSFP, "QSFP91"},  {I2C_MASTER_CH_10, 0x71, 2, QSFP, "QSFP92"},
     {I2C_MASTER_CH_15, 0x71, 0, QSFP, "QSFP93"},  {I2C_MASTER_CH_15, 0x71, 2, QSFP, "QSFP94"},
@@ -465,10 +464,10 @@ static struct i2c_switch fpga_i2c_bus_dev[] = {
     {I2C_MASTER_CH_15, 0x71, 1, QSFP, "QSFP99"},  {I2C_MASTER_CH_15, 0x71, 3, QSFP, "QSFP100"},
     {I2C_MASTER_CH_13, 0x71, 0, QSFP, "QSFP101"}, {I2C_MASTER_CH_13, 0x71, 2, QSFP, "QSFP102"},
     {I2C_MASTER_CH_10, 0x71, 4, QSFP, "QSFP103"}, {I2C_MASTER_CH_10, 0x71, 6, QSFP, "QSFP104"},
-    {I2C_MASTER_CH_15, 0x71, 4, QSFP, "QSFP105"}, {I2C_MASTER_CH_15, 0x71, 6, QSFP, "QSFP106"},
+    {I2C_MASTER_CH_15, 0x71, 5, QSFP, "QSFP105"}, {I2C_MASTER_CH_15, 0x71, 7, QSFP, "QSFP106"},
     {I2C_MASTER_CH_13, 0x71, 1, QSFP, "QSFP107"}, {I2C_MASTER_CH_13, 0x71, 3, QSFP, "QSFP108"},
     {I2C_MASTER_CH_10, 0x71, 5, QSFP, "QSFP109"}, {I2C_MASTER_CH_10, 0x71, 7, QSFP, "QSFP110"},
-    {I2C_MASTER_CH_15, 0x71, 5, QSFP, "QSFP111"}, {I2C_MASTER_CH_15, 0x71, 7, QSFP, "QSFP112"},
+    {I2C_MASTER_CH_15, 0x71, 4, QSFP, "QSFP111"}, {I2C_MASTER_CH_15, 0x71, 6, QSFP, "QSFP112"},
 
     {I2C_MASTER_CH_13, 0x71, 4, QSFP, "QSFP113"}, {I2C_MASTER_CH_13, 0x71, 6, QSFP, "QSFP114"},
     {I2C_MASTER_CH_10, 0x72, 0, QSFP, "QSFP115"}, {I2C_MASTER_CH_10, 0x72, 3, QSFP, "QSFP116"},
@@ -2455,7 +2454,6 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
     int retry = 0;
     unsigned int reg_val = 0;
     struct i2c_adapter * master_adapter;
-    struct i2c_adapter ** ali_ocore_array;
 
     /* Sanity check for the NULL pointer */
     if (adapter == NULL)
@@ -2475,8 +2473,8 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
         printk(KERN_INFO "i2c bus num > %d, access failed!\n", ALI_OCORE_TOTAL);
         return -ENODEV;
     }  
-    ali_ocore_array = ali_ocore_bus_array();
-    master_adapter = ali_ocore_array[master_bus - 1];
+    
+    master_adapter = ali_ocore_i2c_bus[master_bus - 1];
 #if 0
     printk(KERN_INFO "fb2_fpga: get master_adapter: i2c-%d adap_addr=0x%p adap_name= %s adap_num=%d algo->smbus_xfer=0x%p algo->master_xfer=0x%p\n", 
                               master_bus + MASTER_ADAPTER_OFFSET, master_adapter, master_adapter->name, master_adapter->nr, master_adapter->algo->smbus_xfer, 
@@ -3587,19 +3585,14 @@ static void fpgafw_exit(void) {
 
 int th4_init(void)
 {
-    int rc;
+    int rc, bus_nums;
     bool get_done = 0;
     uint32_t fpga_version = 0, reg_val;
 
-    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-2-14");
-
-    get_done = ali_ocore_done_status();
-    if (!get_done) {
-        printk(KERN_INFO "ali_ocore_get not ready! exit.\n");
-        return -ENODEV;
-    } else {
-    	printk(KERN_INFO "ali_ocore_get ready!\n");
-    }
+    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-3-6");
+    
+    for(bus_nums = 2; bus_nums <= ALI_OCORE_TOTAL + 1; bus_nums++)
+	ali_ocore_i2c_bus[bus_nums-2]=i2c_get_adapter(bus_nums);
 
     rc = pcie_reg32_read(0x00, &fpga_version);
     if (rc) {
