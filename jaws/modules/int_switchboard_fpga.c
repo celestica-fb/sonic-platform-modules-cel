@@ -65,8 +65,6 @@ static int  majorNumber;
 *  produre.
 */
 bool port_i2c_bus_init = false;
-extern struct i2c_adapter ** ali_ocore_bus_array(void);
-extern bool ali_ocore_done_status(void);
 
 extern int pcie_reg32_read(uint32_t offset, uint32_t *data);
 extern int pcie_reg32_write(uint32_t offset, uint32_t data);
@@ -151,6 +149,8 @@ PORT XCVR       0x00004000 - 0x00004FFF
 #define I2C_MASTER_CH_TOTAL I2C_MASTER_CH_14
 
 #define ALI_OCORE_TOTAL    (14)
+
+struct i2c_adapter *ali_ocore_i2c_bus[ALI_OCORE_TOTAL];
 
 /* SPI_MASTER */
 #define SPI_MASTER_WR_EN            0x1200 /* one bit */
@@ -1868,7 +1868,6 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
     int retry = 0;
     unsigned int reg_val = 0;
     struct i2c_adapter * master_adapter;
-    struct i2c_adapter ** ali_ocore_array;
 
 	/* Sanity check for the NULL pointer */
     if (adapter == NULL)
@@ -1895,8 +1894,7 @@ static int fpga_i2c_access(struct i2c_adapter *adapter, struct i2c_msg *msgs, in
     prev_switch = (unsigned char)(prev_port >> 8) & 0xFF;
     prev_ch = (unsigned char)(prev_port & 0xFF);
 
-    ali_ocore_array = ali_ocore_bus_array();
-    master_adapter = ali_ocore_array[master_bus - 1];
+    master_adapter = ali_ocore_i2c_bus[master_bus - 1];
 
 #if 0
     printk(KERN_INFO "fb2_fpga: get master_adapter: i2c-%d adap_addr=0x%p adap_name= %s adap_num=%d algo->smbus_xfer=0x%p algo->master_xfer=0x%p\n", 
@@ -2720,20 +2718,14 @@ static void fpgafw_exit(void) {
 
 int phalanxp_init(void)
 {
-    int rc;
+    int rc, bus_nums;
     bool get_done = 0;
     uint32_t fpga_version = 0;
     unsigned int reg_val = 0;
 
-    printk(KERN_INFO "phalanxp: int fpga driver built at %s\n", "2021-2-14");
-    get_done = ali_ocore_done_status();
-    if (!get_done) {
-        printk(KERN_INFO "ali_ocore_get not ready! exit.\n");
-        return -ENODEV;
-    } 
-    else {
-        printk(KERN_INFO "ali_ocore_get ready!\n");
-    }
+    printk(KERN_INFO "phalanxp: int fpga driver built at %s\n", "2021-3-6");
+    for(bus_nums = 2; bus_nums <= ALI_OCORE_TOTAL + 1; bus_nums++)
+	ali_ocore_i2c_bus[bus_nums-2]=i2c_get_adapter(bus_nums);
 
     rc = pcie_reg32_read(0x00, &fpga_version);
     if (rc) {
