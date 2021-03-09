@@ -2,7 +2,6 @@
 
 export INSTALL_MOD_DIR:=extra
 
-ALI_KO_DIR := /sonic/platform/broadcom/sonic-platform-modules-alibaba/common/modules
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
@@ -43,16 +42,10 @@ override_dh_auto_install:
 			/usr/local/bin; \
 		cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
 			debian/platform-modules-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		cp $(ALI_KO_DIR)/*.ko \
-			debian/platform-modules-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		cp $(MOD_SRC_DIR)/tools/fpga_prog/fpga_prog \
 			debian/platform-modules-$${mod}/usr/local/bin/; \
 		if [ $${mod} = shamu ]; then \
 			echo "copy ispvm13.0 bin into shamu dpkg."; \
-			cp $(MOD_SRC_DIR)/tools/ispvme_13.0/ispvm \
-				debian/platform-modules-$${mod}/usr/local/bin/; \
-		elif [ $${mod} = migaloo ]; then \
-			echo "copy ispvm13.0 bin into migaloo dpkg."; \
 			cp $(MOD_SRC_DIR)/tools/ispvme_13.0/ispvm \
 				debian/platform-modules-$${mod}/usr/local/bin/; \
 		elif [ $${mod} = jaws ]; then \
