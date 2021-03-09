@@ -48,7 +48,11 @@ override_dh_auto_install:
 			echo "copy ispvm13.0 bin into shamu dpkg."; \
 			cp $(MOD_SRC_DIR)/tools/ispvme_13.0/ispvm \
 				debian/platform-modules-$${mod}/usr/local/bin/; \
-		elif [ $${mod} = jaws ]; then \
+	        elif [ $${mod} = migaloo ]; then \
+			echo "copy ispvm13.0 bin into migaloo dpkg."; \
+			cp $(MOD_SRC_DIR)/tools/ispvme_13.0/ispvm \
+				debian/platform-modules-$${mod}/usr/local/bin/; \
+	        elif [ $${mod} = jaws ]; then \
 			echo "copy ispvm12.2 bin into jaws dpkg."; \
 			cp $(MOD_SRC_DIR)/tools/ispvme_12.2/ispvm \
 				debian/platform-modules-$${mod}/usr/local/bin/; \
