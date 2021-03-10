@@ -1,5 +1,6 @@
 jaws/cfg/jaws-modules.conf etc/modules-load.d
 jaws/systemd/platform-modules-jaws.service lib/systemd/system
+tools/linux_kernel_fpga.conf etc/modprobe.d
 tools/sync_bmc/bmc_vlan.service etc/systemd/system
 tools/sync_bmc/sync_bmc.service etc/systemd/system
 tools/sync_bmc/sync_bmc.timer etc/systemd/system
