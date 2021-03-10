@@ -5,6 +5,7 @@ shamu/systemd/platform-modules-shamu.service lib/systemd/system
 shamu/modules/sonic_platform-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-alibaba_as14-40d-cl-r0
 services/platform_api/platform_api_mgnt.sh usr/local/bin
 
+tools/linux_kernel_fpga.conf etc/modprobe.d
 tools/sync_bmc/bmc_vlan.service etc/systemd/system
 tools/sync_bmc/sync_bmc.service etc/systemd/system
 tools/sync_bmc/sync_bmc.timer etc/systemd/system

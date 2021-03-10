@@ -3588,11 +3588,23 @@ int th4_init(void)
     int rc, bus_nums;
     bool get_done = 0;
     uint32_t fpga_version = 0, reg_val;
+    struct i2c_adapter *adapt;
 
-    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-3-6");
+    printk(KERN_INFO "th4_int_fpga_drv built at %s\n", "2021-3-10");
     
     for(bus_nums = 2; bus_nums <= ALI_OCORE_TOTAL + 1; bus_nums++)
-	ali_ocore_i2c_bus[bus_nums-2]=i2c_get_adapter(bus_nums);
+    {
+        adapt = i2c_get_adapter(bus_nums);
+        if(adapt != NULL)
+        {
+            ali_ocore_i2c_bus[bus_nums-2]=adapt;
+        }
+        else if(adapt == NULL)
+        {
+	    printk(KERN_INFO "%s init i2c adapter bus (%d) failed base alibaba fpga driver\n", __func__, bus_nums);
+	    return 0;
+        }
+    }
 
     rc = pcie_reg32_read(0x00, &fpga_version);
     if (rc) {

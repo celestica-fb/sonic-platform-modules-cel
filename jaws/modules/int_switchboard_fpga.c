@@ -2722,10 +2722,22 @@ int phalanxp_init(void)
     bool get_done = 0;
     uint32_t fpga_version = 0;
     unsigned int reg_val = 0;
+    struct i2c_adapter *adapt;
 
     printk(KERN_INFO "phalanxp: int fpga driver built at %s\n", "2021-3-6");
     for(bus_nums = 2; bus_nums <= ALI_OCORE_TOTAL + 1; bus_nums++)
-	ali_ocore_i2c_bus[bus_nums-2]=i2c_get_adapter(bus_nums);
+    {
+        adapt = i2c_get_adapter(bus_nums);
+        if(adapt != NULL)
+        {
+	    ali_ocore_i2c_bus[bus_nums-2]=adapt;
+        }
+	else if(adapt == NULL)
+	{
+	    printk(KERN_INFO "%s init i2c adapter bus (%d) failed base alibaba fpga driver\n", __func__, bus_nums);
+	    return 0;
+	}
+    }
 
     rc = pcie_reg32_read(0x00, &fpga_version);
     if (rc) {
